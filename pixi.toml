@@ -1,0 +1,49 @@
+[workspace]
+authors = ["Jianxuan Yao"]
+channels = ["conda-forge"]
+name = "Echo-MF-2kD"
+platforms = ["linux-64"]
+version = "1.0.0"
+
+[dependencies]
+python = "3.12.*"
+numpy = ">=1.26"
+scipy = ">=1.18.1,<2"
+autograd = ">=1.9.1,<2"
+mpmath = ">=1.4.1,<2"
+
+[tasks]
+generate-echo = "python src/cli/generate_echo.py"
+generate-instances = "python src/instances/benchmark.py"
+compare-echo = "python src/cli/compare_echo.py"
+compare-batch = "python src/cli/compare_batch.py"
+budget-curve = "python src/cli/budget_curve.py"
+label-learning = "python src/cli/label_learning.py"
+generate-mwis = "python src/cli/generate_mwis.py"
+
+[feature.learning.dependencies]
+python = "3.12.*"
+numpy = ">=1.26"
+scipy = ">=1.18.1,<2"
+autograd = ">=1.9.1,<2"
+mpmath = ">=1.3,<1.4"
+
+[feature.learning.pypi-dependencies]
+torch = { version = ">=2.6,<3", index = "https://download.pytorch.org/whl/cpu" }
+
+[feature.learning.tasks]
+predict-learning = "python src/cli/predict_learning.py"
+evaluate-baselines = "python src/cli/evaluate_baselines.py"
+canonical-experiments = "python src/cli/run_canonical_experiments.py"
+
+[feature.figures.dependencies]
+matplotlib = ">=3.10,<4"
+tectonic = ">=0.15"
+
+[feature.figures.tasks]
+paper2-figures = "python paper/generate_paper2_figures.py"
+build-bib = "python paper/build_references_bib.py"
+
+[environments]
+learning = { features = ["learning"], no-default-feature = true }
+figures = { features = ["figures"], solve-group = "default" }
