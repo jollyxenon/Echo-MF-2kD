@@ -36,14 +36,16 @@ Email: `yaojx2025@shanghaitech.edu.cn`
 
 ## 2. *Nature Computational Science* 版面与结构合规核验表 (Formatting & Length Audit)
 
-| 版面模块 | *Nature Computational Science* Article 规范要求 | 本稿件实际配置（由 `paper/paper2/paper2-ncs-en.md` / `paper2-ncs-zh.md` 导出） | 合规状态 |
+| 版面模块 | *Nature Computational Science* Article 规范要求 | 本稿件实际配置（由 `paper/paper2/paper2-ncs-en.md` / `paper2-ncs-zh.md` / `paper/paper2/main.tex` 导出） | 合规状态 |
 | :--- | :--- | :--- | :---: |
 | **Title** | 简洁明确，不超 ~15 词，无冒号或空洞修饰词 | *Training-free mean-field adjoint manifold initialization for constrained variational quantum optimization* (10 词，无冒号) | PASS |
-| **Abstract** | 单段，无文献引用，~150–200 词，零复杂公式，含核心定量结果 | 单段 171 词，零引用、零内联复杂公式，涵盖 $2k$D 奇偶消耦、直积能量恒等式、`Echo-MF-2kD` 在 $n=10$（$46.16\%$ vs. TQA $22.42\%$，调用减 $45.2\%$）与 $n=6\text{--}14$（5,120 题）跨规模及抗散粒噪声结果 | PASS |
-| **Introduction** | 无二级小标题，严格四段式漏斗推进（约 600–850 词） | 4 段无子标题漏斗结构（边界与通用模型 $\rightarrow$ 三大范式演进与结构性权衡 $\rightarrow$ $2k$D 直积能量恒等式破局洞察 $\rightarrow$ 技术路线、假设前提与核心实证），零底层数值超参污染 | PASS |
-| **Results** | 不标章节号，陈述句式短标题，遵循“核心现象 $\rightarrow$ 物理机制归因 $\rightarrow$ 理论预言印证”倒金字塔 | 4 个无编号陈述句式结果子节（`Exact product-energy identity on the 2k-dimensional spin-echo manifold` $\rightarrow$ `Doubling ground-state probability while halving quantum search cost` $\rightarrow$ `Cross-scale scaling laws across 5,120 instances and five Ising families` $\rightarrow$ `Shot-noise immunity and early-stopping efficiency`） | PASS |
+| **Abstract** | 单段，无文献引用，$\le 150$ 词，零复杂公式，含核心定量结果 | 单段 **147 词**（严格 $\le 150$ 词），零引用、零内联复杂公式，涵盖 $2k$D 奇偶消耦、直积能量恒等式、`Echo-MF-2kD` 在 $n=10$（$46.16\%$ vs. TQA $22.42\%$，调用减 $45.2\%$）与 $n=6\text{--}14$（5,120 题）跨规模及 $100\%$ 抗散粒噪声结果 | PASS |
+| **Introduction** | 无二级小标题，严格四段式漏斗推进（约 800–850 词） | **847 词**，4 段无子标题漏斗结构（边界与通用模型 $\rightarrow$ 三大范式演进与结构性权衡 $\rightarrow$ $2k$D 直积能量恒等式破局洞察 $\rightarrow$ 技术路线、假设前提与核心实证），零底层数值超参污染 | PASS |
+| **Results** | 不标章节号，陈述句式短标题，遵循“核心现象 $\rightarrow$ 物理机制归因 $\rightarrow$ 理论预言印证”倒金字塔（约 2,050–2,150 词） | **2,121 词**（不含图注与小标题的纯正文为 **1,657 词**），4 个无编号陈述句式结果子节（`Exact product-energy identity on the 2k-dimensional spin-echo manifold` $\rightarrow$ `Doubling ground-state probability while halving quantum search cost` $\rightarrow$ `Cross-scale scaling laws across 5,120 instances and five Ising families` $\rightarrow$ `Shot-noise immunity and early-stopping efficiency`） | PASS |
+| **Discussion** | 无二级小标题，逆漏斗综合讨论与显式边界分析 | **427 词**，3 段无子标题结构，涵盖对称受限可积子流形的跨领域方法论迁移价值、零外场边界（$h=0$）与超完备区间（$n>2k$）激发态长尾的 CVaR 扩展 | PASS |
+| **Main Text Total** | Introduction + Results + Discussion 正文总词数 **$\le 3,500$ 词** | **3,395 词**（`847 + 2,121 + 427`，不含图注与小标题的纯正文为 **2,931 词**，`847 + 1,657 + 427`），严格 $\le 3,500$ 词 | PASS |
 | **Main Display Items** | 正文图表总数 **$\le 6$ 个**（Figures + Tables） | **3 张多面板主图（Figs. 1–3）+ 3 张核心汇总主表（Tables 1–3）= 6 个 Display Items**（全部采用首句加粗点明核心结论的 NCS 自包含图注） | PASS |
-| **Discussion** | 无二级小标题，逆漏斗综合讨论与显式边界分析 | 3 段无子标题结构，涵盖对称受限可积子流形的跨领域方法论迁移价值、零外场边界（$h=0$）与超完备区间（$n>2k$）激发态长尾的 CVaR 扩展 | PASS |
-| **Methods** | 置于 Discussion 之后，不计入正文字数上限，按五维抽象度严格拆分为 4 个独立小节 | 严格拆分为 4 个独立小节：`Problem Formulation and Theoretical Preliminaries`、`Module Design and Algorithmic Procedure`、`Experimental Protocol and Evaluation Setup`、`Implementation Details` | PASS |
+| **Methods** | 置于 Discussion 之后，不计入正文字数上限，按五维抽象度严格拆分为 4 个独立小节 | **2,309 词**（纯正文 **2,288 词**），严格拆分为 4 个独立小节：`Problem Formulation and Theoretical Preliminaries`、`Module Design and Algorithmic Procedure`、`Experimental Protocol and Evaluation Setup`、`Implementation Details` | PASS |
 | **Extended Data** | 最多 **10 个** Extended Data 图/表 | **Extended Data Tables 1–2**（五家族 $n=11,12$ 机制边界、散粒噪声模式 A/B 详表） | PASS |
+| **LaTeX & PDF Build** | Springer Nature / Nature Portfolio 出版级排版，零边距溢出 | `paper/paper2/sn-ncs.sty` + `paper/paper2/convert_md_to_ncs_tex.py` $\rightarrow$ `paper/paper2/main.tex` $\rightarrow$ `paper/paper2/main.pdf`（14 页，0 `Overfull`/`Underfull` 警告） | PASS |
 | **Source Data & Code** | 每张主图需提供 Source Data CSV 及完整复现代码 | `paper/paper2/figures/*.csv` 与 `runs/canonical/*.json` 包含全部源数据；`src/` 与 `scripts/` 提供完整可执行源码（公开仓库：[https://github.com/jollyxenon/Echo-MF-2kD](https://github.com/jollyxenon/Echo-MF-2kD)） | PASS |

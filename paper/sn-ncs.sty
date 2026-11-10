@@ -1,0 +1,128 @@
+%%
+%% sn-ncs.sty - Nature Computational Science (Nature Portfolio) Preprint Style
+%% Clean, publication-grade single-column layout with Nature Portfolio typography
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{sn-ncs}[2026/11/10 Nature Computational Science Article Style]
+
+\RequirePackage[T1]{fontenc}
+\RequirePackage{lmodern}
+\RequirePackage{microtype}
+\RequirePackage[
+  a4paper,
+  top=20mm,
+  bottom=20mm,
+  left=18mm,
+  right=18mm,
+  headheight=14pt,
+  headsep=8mm,
+  footskip=10mm
+]{geometry}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage{amsmath,amssymb,mathtools}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage[font=small,labelfont=bf,labelsep=period]{caption}
+\RequirePackage[numbers,sort&compress,super]{natbib}
+\RequirePackage[colorlinks=true,linkcolor=ncsblue,citecolor=ncsblue,urlcolor=ncsblue]{hyperref}
+
+% Nature Portfolio Palette
+\definecolor{ncsred}{HTML}{B91C1C}
+\definecolor{ncsblue}{HTML}{0F4C81}
+\definecolor{ncsdark}{HTML}{0F172A}
+\definecolor{ncsmuted}{HTML}{475569}
+\definecolor{ncsabg}{HTML}{F8FAFC}
+\definecolor{ncsrule}{HTML}{CBD5E1}
+
+% Running headers and footers
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\sffamily\bfseries\color{ncsred}NATURE COMPUTATIONAL SCIENCE \color{ncsmuted}\mdseries\,|\,ARTICLE}
+\fancyhead[R]{\footnotesize\sffamily\color{ncsmuted}Echo-MF-2kD Manifold Initialization}
+\fancyfoot[C]{\footnotesize\sffamily\color{ncsmuted}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{ncsrule}\leaders\hrule height \headrulewidth\hfill}}
+
+% First page style
+\fancypagestyle{firstpage}{%
+  \fancyhf{}%
+  \fancyhead[L]{\small\sffamily\bfseries\color{ncsred}NATURE COMPUTATIONAL SCIENCE \color{ncsdark}\mdseries\,|\,ARTICLE}%
+  \fancyhead[R]{\footnotesize\sffamily\color{ncsmuted}PREPRINT MANUSCRIPT}%
+  \fancyfoot[C]{\footnotesize\sffamily\color{ncsmuted}\thepage}%
+  \renewcommand{\headrulewidth}{1.0pt}%
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{ncsred}\leaders\hrule height \headrulewidth\hfill}}%
+}
+
+% Section formatting (Unnumbered Nature Portfolio hierarchy)
+\titleformat{\section}
+  {\large\sffamily\bfseries\color{ncsdark}}
+  {}
+  {0em}
+  {}
+\titlespacing*{\section}{0pt}{12pt plus 3pt minus 2pt}{4pt plus 1pt minus 1pt}
+
+\titleformat{\subsection}
+  {\normalsize\sffamily\bfseries\color{ncsdark}}
+  {}
+  {0em}
+  {}
+\titlespacing*{\subsection}{0pt}{9pt plus 2pt minus 1pt}{3pt plus 1pt minus 1pt}
+
+\titleformat{\subsubsection}
+  {\small\sffamily\bfseries\itshape\color{ncsdark}}
+  {}
+  {0em}
+  {}
+\titlespacing*{\subsubsection}{0pt}{6pt plus 1pt minus 1pt}{2pt}
+
+% Paragraph and spacing settings
+\setlength{\parindent}{1.2em}
+\setlength{\parskip}{2.5pt plus 1pt minus 0.5pt}
+\linespread{1.06}
+\emergencystretch=3em
+\binoppenalty=700
+\relpenalty=500
+
+% Float placement
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.85}
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{4}
+\setcounter{totalnumber}{6}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+
+% Title block macros
+\newcommand{\ncstitle}[1]{\def\@ncstitle{#1}}
+\newcommand{\ncsauthor}[1]{\def\@ncsauthor{#1}}
+\newcommand{\ncsaffiliation}[1]{\def\@ncsaffiliation{#1}}
+\newcommand{\ncsemail}[1]{\def\@ncsemail{#1}}
+
+\newcommand{\makencstitle}{%
+  \thispagestyle{firstpage}%
+  \vspace*{2pt}%
+  {\noindent\LARGE\sffamily\bfseries\color{ncsdark}\raggedright \@ncstitle\par}%
+  \vspace{8pt}%
+  {\noindent\normalsize\sffamily\bfseries\color{ncsdark}\@ncsauthor\textsuperscript{1,$\star$}\par}%
+  \vspace{3pt}%
+  {\noindent\footnotesize\sffamily\color{ncsmuted}\textsuperscript{1}\@ncsaffiliation. \textsuperscript{$\star$}e-mail: \href{mailto:\@ncsemail}{\texttt{\@ncsemail}}\par}%
+  \vspace{8pt}%
+}
+
+% Boxed / Ruled Nature Portfolio Abstract Environment
+\newenvironment{ncsabstract}{%
+  \noindent\textcolor{ncsred}{\rule{\textwidth}{1.2pt}}\par\vspace{3pt}%
+  \noindent\begin{minipage}{\textwidth}%
+  \small\sffamily\bfseries\color{ncsdark}%
+}{%
+  \end{minipage}\par\vspace{3pt}%
+  \noindent\textcolor{ncsrule}{\rule{\textwidth}{0.6pt}}\par\vspace{6pt}%
+}
+
+\endinput

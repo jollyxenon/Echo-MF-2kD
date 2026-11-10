@@ -64,7 +64,7 @@ pixi run -e figures paper2-figures
 
 ## Manuscript & Repository Structure
 
-- [`paper/paper2-ncs-en.md`](paper/paper2-ncs-en.md) / [`paper/paper2-ncs-zh.md`](paper/paper2-ncs-zh.md): Full bilingual manuscripts, figures (`paper/figures/`), submission package (`paper/NCS-submission-package.md`), and verified BibTeX (`paper/references.bib`).
+- [`paper/main.pdf`](paper/main.pdf) / [`paper/main.tex`](paper/main.tex) / [`paper/paper2-ncs-en.md`](paper/paper2-ncs-en.md) / [`paper/paper2-ncs-zh.md`](paper/paper2-ncs-zh.md): Publication-grade *Nature Computational Science* LaTeX/PDF manuscript (`sn-ncs.sty`, `convert_md_to_ncs_tex.py`), full bilingual Markdown manuscripts, vector figures (`paper/figures/`, `plot_fig1_pipeline.py`, `generate_paper2_figures.py`), submission package (`paper/NCS-submission-package.md`), and verified BibTeX (`paper/references.bib`).
 - `src/echo/multiscalar.py`: Core $2k$D $\mathrm{SU}(2)$-adjoint engine, temperature-continuation cluster orientation (`resolve_prior_direction`), and staged L-BFGS-B manifold refinement (`Echo-Flat-2kD` / `Echo-MF-2kD`).
 - `src/echo/`: 1D Daubechies flat-top synthesis and root anchoring (`core.py`, `flat_synthesis.py`, `flat_scan.py`, `variants.py`).
 - `src/learning/`: Mean-field solvers, decoders, online baseline suite, and Stage-2 energy optimization (`features.py`, `echo_decoder.py`, `baselines.py`, `optimization.py`).
