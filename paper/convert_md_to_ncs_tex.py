@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Deterministically convert paper/paper2/paper2-ncs-en.md into the publication-grade
-Nature Computational Science (Springer Nature / Nature Portfolio) LaTeX manuscript
-paper/paper2/main.tex.
+Deterministically convert paper/paper2-ncs-en.md into the publication-grade
+single-column LaTeX manuscript paper/main.tex.
 """
 
 import re
@@ -78,13 +77,16 @@ def convert() -> None:
     bib_map = build_bib_map(bib_text)
     md_text = EN_MD.read_text(encoding="utf-8")
 
-    # 1. Split off ## Extended Data, ## Code and Data Availability, ## References
+    # 1. Split off ## Extended Data, End Matter declarations, and ## References
     part_main_and_methods, rem_ext = md_text.split("\n## Extended Data\n", 1)
-    part_ext, _ = rem_ext.split("\n## Code and Data Availability\n", 1)
+    part_ext, rem_decl = rem_ext.split("\n---\n\n## Data Availability\n", 1)
+    part_decl, _ = rem_decl.split("\n## References\n", 1)
 
     full_md = (
         part_main_and_methods.rstrip()
-        + "\n\n@@END_MATTER_AND_BIB@@\n\n## Extended Data\n"
+        + "\n\n## Data Availability\n"
+        + part_decl.rstrip()
+        + "\n\n@@BIBLIOGRAPHY@@\n\n## Extended Data\n"
         + part_ext.rstrip()
         + "\n"
     )
@@ -144,7 +146,7 @@ def convert() -> None:
     # 5. Convert Citations (Parenthetical & Narrative)
     full_md = full_md.replace(
         "(`MWIS`, `Dense Ising`, `Sparse Ising`, `Grid Ising`, and `Pinned MaxCut`; Yao, 2026)",
-        "(`MWIS`, `Dense Ising`, `Sparse Ising`, `Grid Ising`, and `Pinned MaxCut`\\citep{yao2026echo})",
+        "(`MWIS`, `Dense Ising`, `Sparse Ising`, `Grid Ising`, and `Pinned MaxCut`~\\citep{yao2026echo})",
     )
 
     cite_item_re = re.compile(
@@ -193,6 +195,7 @@ def convert() -> None:
         c = (
             c.replace("\\", "\\textbackslash{}")
             .replace("_", "\\_\\allowbreak{}")
+            .replace("/", "/\\allowbreak{}")
             .replace("%", "\\%")
             .replace("&", "\\&")
             .replace("#", "\\#")
@@ -205,9 +208,10 @@ def convert() -> None:
 
     full_md = re.sub(r"`([^`\n]+)`", repl_inline_code, full_md)
 
-    # 8. Extract and convert Tables (**Table X | ...** + | ... |)
+    # 8. Extract and convert Tables (**Table X | ...** + single or a/b dual tabular blocks)
     table_pattern = re.compile(
-        r"(?:###\s+Extended Data Table\s+\d+:[^\n]+\n+)?\*\*Table\s+([0-9A-Za-z\.]+)\s*\|\s*(.+?)\*\*\s*(.+?)\n\n((?:\|[^\n]+\n)+)",
+        r"(?:###\s+Extended Data Table\s+\d+:[^\n]+\n+)?\*\*Table\s+([0-9A-Za-z\.]+)\s*\|\s*(.+?)\*\*\s*(.+?)\n\n"
+        r"((?:\*\*[ab]\.\s+[^\n]+\*\*\n\n)?(?:\|[^\n]+\n)+(?:\n\*\*[ab]\.\s+[^\n]+\*\*\n\n(?:\|[^\n]+\n)+)?)",
         re.DOTALL,
     )
 
@@ -220,6 +224,7 @@ def convert() -> None:
         s = re.sub(r"\*(.+?)\*", r"\\emph{\1}", s)
         s = re.sub(r"_([^_]+)_", r"\\emph{\1}", s)
         s = s.replace("@@AST@@", "*")
+        s = re.sub(r'"([^"]+)"', r"``\1''", s)
         s = s.replace("—", "---").replace("–", "--").replace("→", "$\\rightarrow$")
         s = (
             s.replace("é", "\\'e")
@@ -242,10 +247,18 @@ def convert() -> None:
         res = re.sub(r"@@MATH(\d+)@@", repl_hmath, res)
         return res
 
-    def repl_table(m: re.Match) -> str:
-        t_id, t_bold, t_rest, t_body = m.groups()
-        t_cap_tex = f"\\textbf{{{format_inline_md(t_bold.strip())}}} {format_inline_md(t_rest.strip())}"
-        lines = [l.strip() for l in t_body.strip().split("\n") if l.strip()]
+    def format_header_cell(raw_c: str, col_align: str) -> str:
+        """Render header cell cleanly, using explicit <br> breaks when provided."""
+        if "<br>" in raw_c:
+            parts = [format_inline_md(p.strip()) for p in raw_c.split("<br>")]
+            align_char = "l" if col_align == "l" else "c"
+            inner = " \\\\ ".join(f"\\textbf{{{p}}}" for p in parts)
+            return f"\\shortstack[{align_char}]{{{inner}}}"
+        return f"\\textbf{{{format_inline_md(raw_c.strip())}}}"
+
+    def build_single_tabular(t_id: str, md_grid: str, panel_header: str = "") -> list[str]:
+        """Convert one Markdown pipe-table grid into booktabs LaTeX lines."""
+        lines = [l.strip() for l in md_grid.strip().split("\n") if l.strip()]
         header_cells = [c.strip() for c in lines[0].strip("|").split("|")]
         align_cells = [c.strip() for c in lines[1].strip("|").split("|")]
         data_rows = [
@@ -260,54 +273,79 @@ def convert() -> None:
                 col_specs.append("r")
             else:
                 col_specs.append("l")
-
-        label_id = t_id.lower().replace(".", "_")
+        n_cols = len(col_specs)
         col_spec_str = "".join(col_specs)
 
-        def format_header_cell(raw_c: str, col_align: str) -> str:
-            # Split long header cells into two balanced lines so tables render larger
-            words = raw_c.split(" ")
-            if len(raw_c) <= 20 or len(words) < 2:
-                return f"\\textbf{{{format_inline_md(raw_c)}}}"
-            # Find split point near middle outside of math/code tokens
-            mid = len(raw_c) // 2
-            best_idx = None
-            best_dist = 10**9
-            pos = 0
-            for idx in range(1, len(words)):
-                pos += len(words[idx - 1]) + 1
-                dist = abs(pos - mid)
-                if dist < best_dist:
-                    best_dist = dist
-                    best_idx = idx
-            line1 = format_inline_md(" ".join(words[:best_idx]))
-            line2 = format_inline_md(" ".join(words[best_idx:]))
-            align_char = "l" if col_align == "l" else "c"
-            return f"\\shortstack[{align_char}]{{\\textbf{{{line1}}} \\\\ \\textbf{{{line2}}}}}"
+        if panel_header != "":
+            open_tab = f"\\begin{{tabular*}}{{\\textwidth}}{{@{{\\extracolsep{{\\fill}}}}{col_spec_str}@{{}}}}"
+            close_tab = "\\end{tabular*}"
+        else:
+            open_tab = f"\\resizebox{{\\textwidth}}{{!}}{{%\n\\begin{{tabular}}{{@{{}}{col_spec_str}@{{}}}}"
+            close_tab = "\\end{tabular}%\n}"
 
+        out = [open_tab]
+        if panel_header:
+            m_ph = re.match(r"^([ab])\.\s+(.+)$", panel_header)
+            if m_ph:
+                p_let, p_txt = m_ph.groups()
+                ph_tex = f"\\textbf{{{p_let}.}} \\textbf{{{format_inline_md(p_txt)}}}"
+            else:
+                ph_tex = f"\\textbf{{{format_inline_md(panel_header)}}}"
+            out.append(f"\\multicolumn{{{n_cols}}}{{@{{}}l}}{{{ph_tex}}} \\\\[2pt]")
+        out.append("\\toprule")
+        h_tex = " & ".join(
+            format_header_cell(c, col_specs[idx]) for idx, c in enumerate(header_cells)
+        ) + " \\\\"
+        out.append(h_tex)
+        out.append("\\midrule")
+        for r_idx, row in enumerate(data_rows):
+            if t_id in ("1", "ED1") and r_idx > 0 and row[0]:
+                out.append("\\midrule")
+            elif t_id == "2" and r_idx in (4, 7):
+                out.append("\\midrule")
+            r_tex = " & ".join(format_inline_md(c) for c in row) + " \\\\"
+            out.append(r_tex)
+        out.append("\\bottomrule")
+        out.append(close_tab)
+        return out
+
+    def repl_table(m: re.Match) -> str:
+        t_id, t_bold, t_rest, t_body = m.groups()
+        t_cap_tex = f"\\textbf{{{format_inline_md(t_bold.strip())}}} {format_inline_md(t_rest.strip())}"
+        label_id = t_id.lower().replace(".", "_")
+
+        if t_id in ("2", "ED1"):
+            tabcol_pt = "3.8pt"
+        elif t_id in ("1", "ED2"):
+            tabcol_pt = "4.2pt"
+        else:
+            tabcol_pt = "4.0pt"
         tex_lines = [
             "\\begin{table}[!htbp]",
             f"\\caption{{{t_cap_tex}}}",
             f"\\label{{tab:{label_id}}}",
             "\\vspace{2pt}",
             "\\centering",
-            "\\renewcommand{\\arraystretch}{1.15}",
-            "\\setlength{\\tabcolsep}{3.5pt}",
-            "\\resizebox{\\textwidth}{!}{%",
-            f"\\begin{{tabular}}{{{col_spec_str}}}",
-            "\\toprule",
+            "\\footnotesize",
+            "\\renewcommand{\\arraystretch}{1.12}",
+            f"\\setlength{{\\tabcolsep}}{{{tabcol_pt}}}",
         ]
-        h_tex = " & ".join(
-            format_header_cell(c, col_specs[idx]) for idx, c in enumerate(header_cells)
-        ) + " \\\\"
-        tex_lines.append(h_tex)
-        tex_lines.append("\\midrule")
-        for row in data_rows:
-            r_tex = " & ".join(format_inline_md(c) for c in row) + " \\\\"
-            tex_lines.append(r_tex)
-        tex_lines.append("\\bottomrule")
-        tex_lines.append("\\end{tabular}%")
-        tex_lines.append("}")
+
+        panel_matches = list(
+            re.finditer(
+                r"\*\*([ab]\.\s+[^\n]+?)\*\*\n\n((?:\|[^\n]+\n?)+)",
+                t_body.strip() + "\n",
+            )
+        )
+        if panel_matches:
+            for p_idx, pm in enumerate(panel_matches):
+                if p_idx > 0:
+                    tex_lines.append("\\vspace{6pt}")
+                p_head, p_grid = pm.groups()
+                tex_lines.extend(build_single_tabular(t_id, p_grid, panel_header=p_head.strip()))
+        else:
+            tex_lines.extend(build_single_tabular(t_id, t_body))
+
         tex_lines.append("\\end{table}")
 
         idx = len(table_store)
@@ -372,22 +410,10 @@ def convert() -> None:
             i += 1
             continue
 
-        if s == "@@END_MATTER_AND_BIB@@":
+        if s == "@@BIBLIOGRAPHY@@":
             close_lists_to(0)
-            out_lines.append(
-                "\\section*{Data Availability}\n"
-                "The five-family Ising benchmark datasets (\\texttt{data/benchmark}), the Maximum Weight Independent Set learning and cross-scale benchmark datasets (\\texttt{data/mwis}, spanning $n \\in \\{6, 8, 10, 12, 14\\}$ with 5,120 test instances), and all source data CSV files underlying Figures 1--3 and Extended Data Tables 1--2 are publicly available at \\url{https://github.com/jollyxenon/Echo-MF-2kD}.\n\n"
-                "\\section*{Code Availability}\n"
-                "All core source code---including the \\texttt{Echo-MF-2kD} and \\texttt{Echo-Flat-2kD} $\\mathrm{SU}(2)$-adjoint manifold refinement engine (\\texttt{src/echo/multiscalar.py}), Daubechies maximally flat filter synthesis (\\texttt{src/echo/core.py}), and deterministic evaluation and plotting scripts---is open-sourced under the MIT License at \\url{https://github.com/jollyxenon/Echo-MF-2kD}.\n\n"
-                "\\section*{Acknowledgments}\n"
-                "The author thanks colleagues at ShanghaiTech University for helpful discussions on variational quantum algorithms and statistical mechanics of disordered spin systems.\n\n"
-                "\\section*{Author Contributions}\n"
-                "J.Y. conceived the mathematical theory, designed the \\texttt{Echo-MF-2kD} algorithm, implemented the software and benchmark suites, performed the numerical experiments, analyzed the data, and wrote the manuscript.\n\n"
-                "\\section*{Competing Interests}\n"
-                "The author declares no competing interests.\n\n"
-                "\\bibliographystyle{unsrtnat}\n"
-                "\\bibliography{references}"
-            )
+            out_lines.append("\\bibliographystyle{unsrtnat}")
+            out_lines.append("\\bibliography{references}")
             i += 1
             continue
 
@@ -400,7 +426,7 @@ def convert() -> None:
                 cap_lines.append(lines[i].strip())
                 i += 1
             cap_tex = format_inline_md(" ".join(cap_lines))
-            fig_w = "0.96\\textwidth" if fnum == "1" else "0.92\\textwidth"
+            fig_w = "\\textwidth" if fnum == "1" else "0.94\\textwidth"
             out_lines.append(
                 "\\begin{figure}[!htbp]\n"
                 "\\centering\n"
@@ -484,7 +510,7 @@ def convert() -> None:
 
     preamble = r"""%%%%%%%% NATURE COMPUTATIONAL SCIENCE LATEX MANUSCRIPT %%%%%%%%%%%%%%%%
 %
-% Deterministic conversion of paper/paper2/paper2-ncs-en.md
+% Deterministic conversion of paper/paper2-ncs-en.md
 % Style: Nature Portfolio / Nature Computational Science (sn-ncs.sty)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

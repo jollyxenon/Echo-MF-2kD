@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""生成 Paper 2 (Nature Computational Science) 的数据主图与源数据 CSV（输出至 paper/paper2/figures/）。"""
+"""生成 Echo-MF-2kD 数据主图与源数据 CSV（输出至 paper/figures/）。"""
 from pathlib import Path
 import csv
 import json
@@ -22,11 +22,11 @@ QA = ROOT / 'runs/canonical/figure-qa'
 QA.mkdir(parents=True, exist_ok=True)
 ARCHIVE = ROOT / 'runs/models_and_eval'
 CANON = ROOT / 'runs/canonical'
-MANIFEST = json.loads((ARCHIVE / 'manifest.json').read_text(encoding='utf-8'))
 
 plt.rcParams.update({
     'font.family': 'sans-serif',
     'font.sans-serif': ['DejaVu Sans'],
+    'mathtext.fontset': 'cm',
     'font.size': 8,
     'axes.labelsize': 8,
     'axes.titlesize': 9,
@@ -73,42 +73,52 @@ def save(fig, name):
 REV = ARCHIVE / 'baselines'
 
 
-def load_rev_jsonl(rel_path):
+def load_rev_jsonl(rel_path, expected_ids):
     """加载基线逐题记录并校验题号对齐。"""
     rows = [json.loads(line) for line in (REV / rel_path).read_text(encoding='utf-8').splitlines() if line.strip()]
     rows.sort(key=lambda r: str(r['id']))
-    assert [r['id'] for r in rows] == MANIFEST['datasets']['10']['ids']
+    assert [r['id'] for r in rows] == expected_ids
     return (np.array([r['initial_probability'] for r in rows]) * 100,
             np.array([r['probability'] for r in rows]) * 100)
 
 
-mf_data = {}
-mf_paired_rows = []
-REV_SPECS = [
-    ('Echo-MF-Flat', 'Echo-MF-Flat__p{p:02d}.jsonl'),
-    ('Echo-MF-End', 'Echo-MF-End__p{p:02d}.jsonl'),
-    ('Echo-MF-Alt', 'Echo-MF-Alt__p{p:02d}.jsonl'),
-    ('TQA', 'TQA__p{p:02d}.jsonl'),
-    ('Echo-Energy', 'Echo-Energy__p{p:02d}.jsonl'),
-    ('RI (1)', 'RI-1__p{p:02d}.jsonl'),
-]
-for tag, pattern in REV_SPECS:
+if (ARCHIVE / 'manifest.json').exists():
+    manifest = json.loads((ARCHIVE / 'manifest.json').read_text(encoding='utf-8'))
+    expected_ids = manifest['datasets']['10']['ids']
+    mf_paired_rows = []
+    REV_SPECS = [
+        ('Echo-MF-Flat', 'Echo-MF-Flat__p{p:02d}.jsonl'),
+        ('Echo-MF-End', 'Echo-MF-End__p{p:02d}.jsonl'),
+        ('Echo-MF-Alt', 'Echo-MF-Alt__p{p:02d}.jsonl'),
+        ('TQA', 'TQA__p{p:02d}.jsonl'),
+        ('Echo-Energy', 'Echo-Energy__p{p:02d}.jsonl'),
+        ('RI (1)', 'RI-1__p{p:02d}.jsonl'),
+    ]
+    for tag, pattern in REV_SPECS:
+        for p in (8, 10, 12):
+            init_v, final_v = load_rev_jsonl(pattern.format(p=p), expected_ids)
+            for inst_id, x, y in zip(expected_ids, init_v, final_v):
+                mf_paired_rows.append(dict(id=inst_id, n=10, depth=p, method=tag, initial_percent=x, final_percent=y))
     for p in (8, 10, 12):
-        init_v, final_v = load_rev_jsonl(pattern.format(p=p))
-        mf_data[tag, p] = (init_v, final_v)
-        for inst_id, x, y in zip(MANIFEST['datasets']['10']['ids'], init_v, final_v):
-            mf_paired_rows.append(dict(id=inst_id, n=10, depth=p, method=tag, initial_percent=x, final_percent=y))
-for p in (8, 10, 12):
-    p_path = CANON / f'n10_2kd_test1024_p{p:02d}_v2.jsonl'
-    rows_2kd = [json.loads(line) for line in p_path.read_text(encoding='utf-8').splitlines() if line.strip()]
-    rows_2kd.sort(key=lambda r: str(r['id']))
-    assert [r['id'] for r in rows_2kd] == MANIFEST['datasets']['10']['ids']
-    init_2kd = np.array([r['Echo-MF-2kD']['top1']['initial_probability'] for r in rows_2kd]) * 100
-    final_2kd = np.array([r['Echo-MF-2kD']['top1']['probability'] for r in rows_2kd]) * 100
-    mf_data['Echo-MF-2kD', p] = (init_2kd, final_2kd)
-    for inst_id, x, y in zip(MANIFEST['datasets']['10']['ids'], init_2kd, final_2kd):
-        mf_paired_rows.append(dict(id=inst_id, n=10, depth=p, method='Echo-MF-2kD', initial_percent=x, final_percent=y))
-write_csv('mf-echo-paired.csv', mf_paired_rows)
+        p_path = CANON / f'n10_2kd_test1024_p{p:02d}_v2.jsonl'
+        rows_2kd = [json.loads(line) for line in p_path.read_text(encoding='utf-8').splitlines() if line.strip()]
+        rows_2kd.sort(key=lambda r: str(r['id']))
+        assert [r['id'] for r in rows_2kd] == expected_ids
+        init_2kd = np.array([r['Echo-MF-2kD']['top1']['initial_probability'] for r in rows_2kd]) * 100
+        final_2kd = np.array([r['Echo-MF-2kD']['top1']['probability'] for r in rows_2kd]) * 100
+        for inst_id, x, y in zip(expected_ids, init_2kd, final_2kd):
+            mf_paired_rows.append(dict(id=inst_id, n=10, depth=p, method='Echo-MF-2kD', initial_percent=x, final_percent=y))
+    write_csv('mf-echo-paired.csv', mf_paired_rows)
+
+mf_data = {}
+with (OUT / 'mf-echo-paired.csv').open('r', encoding='utf-8') as f:
+    grouped_paired = {}
+    for row in csv.DictReader(f):
+        key = (row['method'], int(row['depth']))
+        grouped_paired.setdefault(key, []).append((row['id'], float(row['initial_percent']), float(row['final_percent'])))
+    for key, items in grouped_paired.items():
+        items.sort(key=lambda t: t[0])
+        mf_data[key] = (np.array([t[1] for t in items]), np.array([t[2] for t in items]))
 
 fig, axes = plt.subplots(2, 2, figsize=(7.1, 5.6))
 fig.subplots_adjust(left=.145, right=.975, bottom=.08, top=.91, wspace=.36, hspace=.40)
@@ -200,8 +210,9 @@ mc.axvline(50, color='#9BA3AA', lw=.7, ls='--', zorder=1)
 pct_mf2k50 = np.mean(mf2k_cross >= 50) * 100
 pct_mf50 = np.mean(mf_cross >= 50) * 100
 pct_tqa1_50 = np.mean(tqa1_cross >= 50) * 100
-mc.text(52, .32, f'Pgs ≥ 50%:\nEcho-MF-2kD: {pct_mf2k50:.1f}%\nEcho-MF-Flat: {pct_mf50:.1f}%\nTQA: {pct_tqa1_50:.1f}%',
-        va='bottom', ha='left', fontsize=6.0, color='#2D3748')
+mc.text(52, .50, r'$P_{\mathrm{gs}} \geq 50\%$:', va='bottom', ha='left', fontsize=7.3, color='#2D3748')
+mc.text(52, .31, f'Echo-MF-2kD: {pct_mf2k50:.1f}%\nEcho-MF-Flat: {pct_mf50:.1f}%\nTQA: {pct_tqa1_50:.1f}%',
+        va='bottom', ha='left', fontsize=6.1, color='#2D3748')
 mc.set(xlim=(0, 100), ylim=(0, 1.02), xticks=[0, 25, 50, 75, 100], yticks=[0, .25, .5, .75, 1.0],
        xlabel='Ground-state probability (%)', ylabel='Empirical CDF')
 mc.legend(loc='lower right', bbox_to_anchor=(.99, .02), frameon=False, fontsize=6.1)
@@ -251,58 +262,72 @@ C_PRIOR = '#007F78'
 C_MF = '#1F9E89'
 C_TQA = '#4676A8'
 
-mwis_scale = json.loads((CANON / 'mwis_multiscalar_scaling_p10.json').read_text(encoding='utf-8'))
-online_scale = json.loads((CANON / 'online_kd_scaling_p10.json').read_text(encoding='utf-8'))
-shot_summary = json.loads((CANON / 'shot_noise_summary_p10.json').read_text(encoding='utf-8'))
+if (CANON / 'mwis_multiscalar_scaling_p10.json').exists():
+    mwis_scale = json.loads((CANON / 'mwis_multiscalar_scaling_p10.json').read_text(encoding='utf-8'))
+    online_scale = json.loads((CANON / 'online_kd_scaling_p10.json').read_text(encoding='utf-8'))
+    shot_summary = json.loads((CANON / 'shot_noise_summary_p10.json').read_text(encoding='utf-8'))
+    csv_rows = []
+    for n in sorted(int(k[1:]) for k in mwis_scale.keys()):
+        rec = mwis_scale[f'n{n:02d}']
+        for m_label, k_pct, k_ci in [
+            ('Echo-Flat-2kD (Top-1)', 'Echo-Flat-2kD_top1_pct', 'Echo-Flat-2kD_top1_ci_offset'),
+            ('Echo-Flat-1D (Top-1)', 'Echo-Flat-1D_top1_pct', 'Echo-Flat-1D_top1_ci_offset'),
+            ('TQA (Top-1)', 'TQA_top1_pct', 'TQA_top1_ci_offset'),
+        ]:
+            lo_v, hi_v = map(float, rec[k_ci])
+            csv_rows.append(dict(panel='a_cross_scale_mwis_p10', setting=f'n={n}', method=m_label,
+                                 mean_pct=round(float(rec[k_pct]), 2), ci_minus=round(lo_v, 2), ci_plus=round(hi_v, 2)))
+    for n in sorted(int(k[1:]) for k in online_scale.keys()):
+        r = online_scale[f'n{n:02d}']
+        csv_rows.append(dict(panel='b_oriented_spin_accuracy', setting=f'n={n}', method='Echo-MF-2kD',
+                             mean_pct=round(float(r['mf_kd_bit_acc_pct']), 2), ci_minus=0.0, ci_plus=0.0))
+        for m_label, k_pct, k_ci in [
+            ('Echo-MF-2kD', 'mf_kd_final_pct', 'mf_kd_final_ci'),
+            ('Echo-MF-Flat (1D)', 'mf_1d_final_pct', 'mf_1d_final_ci'),
+            ('Online TQA (32 evals)', 'tqa_final_pct', 'tqa_final_ci'),
+        ]:
+            csv_rows.append(dict(panel='b_online_scaling_p10', setting=f'n={n}', method=m_label,
+                                 mean_pct=round(float(r[k_pct]), 2),
+                                 ci_minus=round(float(r[k_ci][0]), 2),
+                                 ci_plus=round(float(r[k_ci][1]), 2)))
+    for s in [16, 32, 64, 128, 256, 512, 1024]:
+        m1 = float(shot_summary['regime_a_stage1_shot_noise']['TQA'][str(s)]['exact_candidate_match_pct'])
+        csv_rows.append(dict(panel='c_stage1_shot_noise_hit_rate', setting=f'N_shots={s}', method='TQA',
+                             mean_pct=round(m1, 2), ci_minus=0.0, ci_plus=0.0))
+    regime_b = shot_summary['regime_b_end_to_end_parameter_shift']
+    for m_name, raw_m in [
+        ('Echo-MF-2kD (64 steps)', 'Echo-MF-2kD'),
+        ('Echo-MF-Flat (64 steps)', 'Echo-MF-Flat'),
+        ('TQA (64 steps)', 'TQA'),
+    ]:
+        for s_val in [64, 256, 1024, 4096]:
+            m_val = float(regime_b[str(s_val)][raw_m]['mean_final_pct'])
+            l_val, h_val = map(float, regime_b[str(s_val)][raw_m]['final_ci'])
+            csv_rows.append(dict(panel='d_end_to_end_finite_shot', setting=f'N_shots={s_val}', method=m_name,
+                                 mean_pct=round(m_val, 2), ci_minus=round(l_val, 2), ci_plus=round(h_val, 2)))
+    write_csv('scale-and-shot-noise-summary.csv', csv_rows)
 
-sizes_all = sorted(int(k[1:]) for k in mwis_scale.keys())
-echo_kd_means, echo_kd_lo, echo_kd_hi = [], [], []
-echo_1d_means, echo_1d_lo, echo_1d_hi = [], [], []
-tqa_means, tqa_lo, tqa_hi = [], [], []
-csv_rows = []
+with (OUT / 'scale-and-shot-noise-summary.csv').open('r', encoding='utf-8') as f:
+    scale_rows = list(csv.DictReader(f))
 
-for n in sizes_all:
-    rec = mwis_scale[f'n{n:02d}']
-    m_kd = float(rec['Echo-Flat-2kD_top1_pct'])
-    lo_kd, hi_kd = map(float, rec['Echo-Flat-2kD_top1_ci_offset'])
-    m_1d = float(rec['Echo-Flat-1D_top1_pct'])
-    lo_1d, hi_1d = map(float, rec['Echo-Flat-1D_top1_ci_offset'])
-    m_tqa = float(rec['TQA_top1_pct'])
-    lo_tqa, hi_tqa = map(float, rec['TQA_top1_ci_offset'])
+scale_lookup = {(r['panel'], r['setting'], r['method']): (float(r['mean_pct']), float(r['ci_minus']), float(r['ci_plus']))
+                for r in scale_rows}
+sizes_all = sorted({int(r['setting'].split('=')[1]) for r in scale_rows if r['panel'] == 'a_cross_scale_mwis_p10'})
+echo_kd_means = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'Echo-Flat-2kD (Top-1)'][0] for n in sizes_all]
+echo_kd_lo = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'Echo-Flat-2kD (Top-1)'][1] for n in sizes_all]
+echo_kd_hi = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'Echo-Flat-2kD (Top-1)'][2] for n in sizes_all]
+echo_1d_means = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'Echo-Flat-1D (Top-1)'][0] for n in sizes_all]
+echo_1d_lo = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'Echo-Flat-1D (Top-1)'][1] for n in sizes_all]
+echo_1d_hi = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'Echo-Flat-1D (Top-1)'][2] for n in sizes_all]
+tqa_means = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'TQA (Top-1)'][0] for n in sizes_all]
+tqa_lo = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'TQA (Top-1)'][1] for n in sizes_all]
+tqa_hi = [scale_lookup['a_cross_scale_mwis_p10', f'n={n}', 'TQA (Top-1)'][2] for n in sizes_all]
 
-    echo_kd_means.append(m_kd); echo_kd_lo.append(lo_kd); echo_kd_hi.append(hi_kd)
-    echo_1d_means.append(m_1d); echo_1d_lo.append(lo_1d); echo_1d_hi.append(hi_1d)
-    tqa_means.append(m_tqa); tqa_lo.append(lo_tqa); tqa_hi.append(hi_tqa)
-
-    csv_rows.append(dict(panel='a_cross_scale_mwis_p10', setting=f'n={n}', method='Echo-Flat-2kD (Top-1)',
-                         mean_pct=round(m_kd, 2), ci_minus=round(lo_kd, 2), ci_plus=round(hi_kd, 2)))
-    csv_rows.append(dict(panel='a_cross_scale_mwis_p10', setting=f'n={n}', method='Echo-Flat-1D (Top-1)',
-                         mean_pct=round(m_1d, 2), ci_minus=round(lo_1d, 2), ci_plus=round(hi_1d, 2)))
-    csv_rows.append(dict(panel='a_cross_scale_mwis_p10', setting=f'n={n}', method='TQA (Top-1)',
-                         mean_pct=round(m_tqa, 2), ci_minus=round(lo_tqa, 2), ci_plus=round(hi_tqa, 2)))
-
-online_sizes = sorted(int(k[1:]) for k in online_scale.keys())
-mf_accs, mf_p10_bars, mf1d_p10_bars, tqa_p10_bars = [], [], [], []
-for n in online_sizes:
-    r = online_scale[f'n{n:02d}']
-    mf_accs.append(float(r['mf_kd_bit_acc_pct']))
-    mf_p10_bars.append(float(r['mf_kd_final_pct']))
-    mf1d_p10_bars.append(float(r['mf_1d_final_pct']))
-    tqa_p10_bars.append(float(r['tqa_final_pct']))
-    csv_rows.append(dict(panel='b_oriented_spin_accuracy', setting=f'n={n}', method='Echo-MF-2kD',
-                         mean_pct=round(float(r['mf_kd_bit_acc_pct']), 2), ci_minus=0.0, ci_plus=0.0))
-    csv_rows.append(dict(panel='b_online_scaling_p10', setting=f'n={n}', method='Echo-MF-2kD',
-                         mean_pct=round(float(r['mf_kd_final_pct']), 2),
-                         ci_minus=round(float(r['mf_kd_final_ci'][0]), 2),
-                         ci_plus=round(float(r['mf_kd_final_ci'][1]), 2)))
-    csv_rows.append(dict(panel='b_online_scaling_p10', setting=f'n={n}', method='Echo-MF-Flat (1D)',
-                         mean_pct=round(float(r['mf_1d_final_pct']), 2),
-                         ci_minus=round(float(r['mf_1d_final_ci'][0]), 2),
-                         ci_plus=round(float(r['mf_1d_final_ci'][1]), 2)))
-    csv_rows.append(dict(panel='b_online_scaling_p10', setting=f'n={n}', method='Online TQA (32 evals)',
-                         mean_pct=round(float(r['tqa_final_pct']), 2),
-                         ci_minus=round(float(r['tqa_final_ci'][0]), 2),
-                         ci_plus=round(float(r['tqa_final_ci'][1]), 2)))
+online_sizes = sorted({int(r['setting'].split('=')[1]) for r in scale_rows if r['panel'] == 'b_online_scaling_p10'})
+mf_accs = [scale_lookup['b_oriented_spin_accuracy', f'n={n}', 'Echo-MF-2kD'][0] for n in online_sizes]
+mf_p10_bars = [scale_lookup['b_online_scaling_p10', f'n={n}', 'Echo-MF-2kD'][0] for n in online_sizes]
+mf1d_p10_bars = [scale_lookup['b_online_scaling_p10', f'n={n}', 'Echo-MF-Flat (1D)'][0] for n in online_sizes]
+tqa_p10_bars = [scale_lookup['b_online_scaling_p10', f'n={n}', 'Online TQA (32 evals)'][0] for n in online_sizes]
 
 fig, axes = plt.subplots(2, 2, figsize=(7.1, 5.6))
 fig.subplots_adjust(left=.115, right=.975, bottom=.10, top=.91, wspace=.34, hspace=.42)
@@ -322,13 +347,15 @@ ax_a.errorbar(x_a, tqa_means, yerr=[tqa_lo, tqa_hi], fmt='v--', color=C_TQA, lw=
               capsize=2.0, capthick=0.75, label='TQA (Top-1)')
 ax_a.fill_between(x_a, tqa_means, echo_kd_means, color=C_PRIOR, alpha=0.10)
 for idx_show in range(len(sizes_all)):
-    ax_a.text(x_a[idx_show], echo_kd_means[idx_show] + echo_kd_hi[idx_show] + 1.6,
+    dx_a = 0.14 if idx_show == 0 else (0.10 if idx_show < len(sizes_all) - 1 else -0.04)
+    ax_a.text(x_a[idx_show] + dx_a, echo_kd_means[idx_show] + echo_kd_hi[idx_show] + 2.2,
               f'{echo_kd_means[idx_show]:.1f}%', ha='center', va='bottom', fontsize=6.3, color=C_PRIOR, fontweight='bold')
+ax_a.set_xlim(-0.36, len(sizes_all) - 0.62)
 ax_a.set_xticks(x_a)
 ax_a.set_xticklabels([str(n) for n in sizes_all])
 ax_a.set_xlabel(f'Number of qubits n ({1 << sizes_all[0]} to {1 << sizes_all[-1]:,} states)')
 ax_a.set_ylabel('Ground-state probability (%)')
-ax_a.set_ylim(0, 109)
+ax_a.set_ylim(0, 112)
 ax_a.legend(loc='upper right', frameon=False, fontsize=6.1)
 
 xb = np.arange(len(online_sizes))
@@ -348,7 +375,7 @@ ax_b.legend(loc='center right', bbox_to_anchor=(1.01, 0.62), frameon=False, font
 
 shots_c = [16, 32, 64, 128, 256, 512, 1024]
 xc = np.arange(len(shots_c))
-tqa_match = [float(shot_summary['regime_a_stage1_shot_noise']['TQA'][str(s)]['exact_candidate_match_pct']) for s in shots_c]
+tqa_match = [scale_lookup['c_stage1_shot_noise_hit_rate', f'N_shots={s}', 'TQA'][0] for s in shots_c]
 
 ax_c.axhline(100.0, color=C_PRIOR, lw=1.6, ls='-', label='Echo-MF (0 shots, 100%)')
 ax_c.plot(xc, tqa_match, 'v-', color=C_TQA, lw=1.5, ms=4.5, label='TQA (32 candidates)')
@@ -364,28 +391,20 @@ ax_c.set_ylabel('Optimal Stage-1 candidate hit rate (%)')
 ax_c.set_ylim(20, 112)
 ax_c.legend(loc='lower right', bbox_to_anchor=(1.0, 0.04), frameon=False, fontsize=6.5)
 
-for s, m1 in zip(shots_c, tqa_match):
-    csv_rows.append(dict(panel='c_stage1_shot_noise_hit_rate', setting=f'N_shots={s}', method='TQA',
-                         mean_pct=round(m1, 2), ci_minus=0.0, ci_plus=0.0))
-
 shots_d = [64, 256, 1024, 4096]
 xd = np.arange(len(shots_d))
-regime_b = shot_summary['regime_b_end_to_end_parameter_shift']
 plotted_series = {}
-for m_name, raw_m, key_m, key_ci, col, fmt, disp in [
-    ('Echo-MF-2kD (64 steps)', 'Echo-MF-2kD', 'mean_final_pct', 'final_ci', C_PRIOR, 'o-', 'Echo-MF-2kD (64st, 0+2560)'),
-    ('Echo-MF-Flat (64 steps)', 'Echo-MF-Flat', 'mean_final_pct', 'final_ci', C_MF, 's:', 'Echo-MF-Flat (64st, 0+2560)'),
-    ('TQA (64 steps)', 'TQA', 'mean_final_pct', 'final_ci', C_TQA, 'v--', 'TQA (64st, 32+2560)'),
+for m_name, col, fmt, disp in [
+    ('Echo-MF-2kD (64 steps)', C_PRIOR, 'o-', 'Echo-MF-2kD (64st, 0+2560)'),
+    ('Echo-MF-Flat (64 steps)', C_MF, 's:', 'Echo-MF-Flat (64st, 0+2560)'),
+    ('TQA (64 steps)', C_TQA, 'v--', 'TQA (64st, 32+2560)'),
 ]:
-    means = [float(regime_b[str(s)][raw_m][key_m]) for s in shots_d]
-    lo = [float(regime_b[str(s)][raw_m][key_ci][0]) for s in shots_d]
-    hi = [float(regime_b[str(s)][raw_m][key_ci][1]) for s in shots_d]
+    means = [scale_lookup['d_end_to_end_finite_shot', f'N_shots={s}', m_name][0] for s in shots_d]
+    lo = [scale_lookup['d_end_to_end_finite_shot', f'N_shots={s}', m_name][1] for s in shots_d]
+    hi = [scale_lookup['d_end_to_end_finite_shot', f'N_shots={s}', m_name][2] for s in shots_d]
     plotted_series[m_name] = (means, lo, hi)
     ax_d.errorbar(xd, means, yerr=[lo, hi], fmt=fmt, color=col, lw=1.35, ms=4.1,
                   capsize=2.0, capthick=0.75, label=disp)
-    for s_val, m_val, l_val, h_val in zip(shots_d, means, lo, hi):
-        csv_rows.append(dict(panel='d_end_to_end_finite_shot', setting=f'N_shots={s_val}', method=m_name,
-                             mean_pct=round(m_val, 2), ci_minus=round(l_val, 2), ci_plus=round(h_val, 2)))
 
 mf2k_means, _, mf2k_hi = plotted_series['Echo-MF-2kD (64 steps)']
 mff_means_d, mff_lo_d, _ = plotted_series['Echo-MF-Flat (64 steps)']
@@ -406,6 +425,5 @@ ax_d.set_ylim(10, 56)
 ax_d.legend(loc='center right', bbox_to_anchor=(1.0, 0.56), frameon=False,
             fontsize=5.9, handlelength=1.4)
 
-write_csv('scale-and-shot-noise-summary.csv', csv_rows)
 save(fig, 'scale-and-shot-noise')
 print("Successfully generated Paper 2 figures and CSVs in", OUT)

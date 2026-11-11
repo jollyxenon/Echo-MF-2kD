@@ -14,7 +14,7 @@
   bottom=20mm,
   left=18mm,
   right=18mm,
-  headheight=14pt,
+  headheight=20pt,
   headsep=8mm,
   footskip=10mm
 ]{geometry}
@@ -40,7 +40,7 @@
 % Running headers and footers
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\footnotesize\sffamily\bfseries\color{ncsred}NATURE COMPUTATIONAL SCIENCE \color{ncsmuted}\mdseries\,|\,ARTICLE}
+\fancyhead[L]{\footnotesize\sffamily\color{ncsmuted}Jianxuan Yao}
 \fancyhead[R]{\footnotesize\sffamily\color{ncsmuted}Echo-MF-2kD Manifold Initialization}
 \fancyfoot[C]{\footnotesize\sffamily\color{ncsmuted}\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -49,11 +49,11 @@
 % First page style
 \fancypagestyle{firstpage}{%
   \fancyhf{}%
-  \fancyhead[L]{\small\sffamily\bfseries\color{ncsred}NATURE COMPUTATIONAL SCIENCE \color{ncsdark}\mdseries\,|\,ARTICLE}%
-  \fancyhead[R]{\footnotesize\sffamily\color{ncsmuted}PREPRINT MANUSCRIPT}%
+  \fancyhead[L]{\footnotesize\sffamily\bfseries\color{ncsdark}PREPRINT MANUSCRIPT}%
+  \fancyhead[R]{\footnotesize\sffamily\color{ncsmuted}RESEARCH ARTICLE}%
   \fancyfoot[C]{\footnotesize\sffamily\color{ncsmuted}\thepage}%
-  \renewcommand{\headrulewidth}{1.0pt}%
-  \renewcommand{\headrule}{\hbox to\headwidth{\color{ncsred}\leaders\hrule height \headrulewidth\hfill}}%
+  \renewcommand{\headrulewidth}{0.8pt}%
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{ncsdark}\leaders\hrule height \headrulewidth\hfill}}%
 }
 
 % Section formatting (Unnumbered Nature Portfolio hierarchy)
@@ -105,6 +105,7 @@
 \newcommand{\ncsemail}[1]{\def\@ncsemail{#1}}
 
 \newcommand{\makencstitle}{%
+  \hypersetup{pdftitle={\@ncstitle},pdfauthor={\@ncsauthor},pdfsubject={Preprint Manuscript},pdfkeywords={Quantum Approximate Optimization Algorithm, Spin Echo, Mean-Field Theory, Variational Quantum Optimization, Combinatorial Optimization}}%
   \thispagestyle{firstpage}%
   \vspace*{2pt}%
   {\noindent\LARGE\sffamily\bfseries\color{ncsdark}\raggedright \@ncstitle\par}%
@@ -115,9 +116,9 @@
   \vspace{8pt}%
 }
 
-% Boxed / Ruled Nature Portfolio Abstract Environment
+% Boxed / Ruled Preprint Abstract Environment
 \newenvironment{ncsabstract}{%
-  \noindent\textcolor{ncsred}{\rule{\textwidth}{1.2pt}}\par\vspace{3pt}%
+  \noindent\textcolor{ncsdark}{\rule{\textwidth}{1.0pt}}\par\vspace{3pt}%
   \noindent\begin{minipage}{\textwidth}%
   \small\sffamily\bfseries\color{ncsdark}%
 }{%

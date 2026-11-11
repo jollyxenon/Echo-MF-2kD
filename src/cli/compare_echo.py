@@ -12,6 +12,7 @@ import random
 import resource
 import platform
 import sys
+import zlib
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/"src"))
@@ -60,8 +61,9 @@ def run(instance,depth,seed,cap,output):
     tasks = [(row,"LBFGSB",row) for row in ECHO_ROWS]+[(row,row,None) for row in BASELINE_ROWS]
     random.Random(seed+depth*100).shuffle(tasks)
     for name,method,variant in tasks:
+        row_seed = [seed,zlib.crc32(metadata["id"].encode("utf-8")),depth] if method=="RI-LBFGSB" else seed
         with (output/(name+".jsonl")).open("w") as stream:
-            result,formula = solve(J,h,target,depth,variant,stream,cap,method,seed)
+            result,formula = solve(J,h,target,depth,variant,stream,cap,method,row_seed)
         verify(result,J,h,target,ground)
         save_json(output/(name+".json"),result)
         results[name],statuses[name] = result,result["status"]
