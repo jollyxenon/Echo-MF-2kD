@@ -11,7 +11,7 @@ This repository provides the complete codebase for:
 2. **Training-Free Mean-Field Adjoint Manifold Initialization (`Echo-MF-2kD`)**:
    - Requires **zero training data, zero data leakage, and zero online quantum selection measurements**, accepting only problem coefficients $(J,h)$.
    - Combines 80-step damped mean-field inference ($\beta_{\mathrm{mf}}^\star=2.0$), deterministic temperature-continuation cluster orientation ($\beta\in\{2.5,6.0,16.0\}$), 1D Daubechies flat-top convex-interval root anchoring (Yao, 2026), and staged $O(kn)$ $\mathrm{SU}(2)$-adjoint L-BFGS-B refinement within a non-degenerate mixer bound $|\theta_j|\le 1.40$ (jointly optimizing flip-sensitivity-weighted log-likelihood, local effective-field inversion guards, and classical product energy $E_{\mathrm{prod}}$), followed by Stage-2 full-angle L-BFGS-B energy recoupling.
-   - Across 1,024 held-out MWIS center test instances ($n=10, p\in\{8,10,12\}$) and 5,120 cross-scale test instances ($n\in\{6,8,10,12,14\}$), `Echo-MF-2kD` doubles final ground-state probability ($46.16\%$ vs. $22.42\%$ for 32-evaluation online TQA) while cutting Stage-2 quantum gradient calls by $45.2\%$ and achieving $100\%$ Stage-1 shot-noise immunity.
+   - Across 1,024 held-out MWIS center test instances ($n=10, p\in\{8,10,12\}$) and 5,120 cross-scale test instances ($n\in\{6,8,10,12,14\}$), `Echo-MF-2kD` doubles final ground-state probability ($46.16\%$ vs. $22.42\%$ for 32-evaluation online TQA) while cutting Stage-2 energy–gradient evaluations by $45.2\%$ and achieving $100\%$ Stage-1 shot-noise immunity.
 
 ---
 

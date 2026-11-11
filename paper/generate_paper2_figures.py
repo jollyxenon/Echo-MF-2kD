@@ -395,9 +395,9 @@ shots_d = [64, 256, 1024, 4096]
 xd = np.arange(len(shots_d))
 plotted_series = {}
 for m_name, col, fmt, disp in [
-    ('Echo-MF-2kD (64 steps)', C_PRIOR, 'o-', 'Echo-MF-2kD (64st, 0+2560)'),
-    ('Echo-MF-Flat (64 steps)', C_MF, 's:', 'Echo-MF-Flat (64st, 0+2560)'),
-    ('TQA (64 steps)', C_TQA, 'v--', 'TQA (64st, 32+2560)'),
+    ('Echo-MF-2kD (64 steps)', C_PRIOR, 'o-', 'Echo-MF-2kD (64st, 0+2625)'),
+    ('Echo-MF-Flat (64 steps)', C_MF, 's:', 'Echo-MF-Flat (64st, 0+2625)'),
+    ('TQA (64 steps)', C_TQA, 'v--', 'TQA (64st, 32+2625)'),
 ]:
     means = [scale_lookup['d_end_to_end_finite_shot', f'N_shots={s}', m_name][0] for s in shots_d]
     lo = [scale_lookup['d_end_to_end_finite_shot', f'N_shots={s}', m_name][1] for s in shots_d]

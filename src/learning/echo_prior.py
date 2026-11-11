@@ -81,7 +81,7 @@ class EchoPrior(nn.Module):
 
 
 class EchoGNNScalar(nn.Module):
-    """图级均值池化 + 对称多分支标量回归的一维流形输出表示消融模型。"""
+    """图级均值池化 + 有向多分支标量回归的一维流形输出表示消融模型。"""
 
     def __init__(self, mean, std, width: int = 64, rounds: int = 4):
         super().__init__()
@@ -173,7 +173,8 @@ def train_and_predict_manifold_ablations(
     rounds: int = 4,
     learning_rate: float = 1e-3,
     grid_points: int = 128,
-) -> tuple[np.ndarray, np.ndarray]:
+    run_grid: bool = True,
+) -> tuple[np.ndarray, np.ndarray | None]:
     """训练并预测 1D 平顶流形输出表示消融模型 Echo-GNN-Scalar 与 Echo-GNN-Grid，返回测试集标量 a (未乘 scale)。"""
     from echo.variants import load_formula
     from learning.echo_decoder import expected_success
@@ -201,7 +202,7 @@ def train_and_predict_manifold_ablations(
             if scores[idx] < 0.9 * s_max:
                 break
             cand_dec = float(grid_dec[idx])
-            if all(min(abs(cand_dec - c), abs(cand_dec + c)) / GAMMA_MAX > 0.01 for c in chosen):
+            if all(abs(cand_dec - c) / GAMMA_MAX > 0.01 for c in chosen):
                 chosen.append(cand_dec)
                 if len(chosen) == 4:
                     break
@@ -233,7 +234,7 @@ def train_and_predict_manifold_ablations(
         opt_s.zero_grad()
         pred_dec = model_scalar(features_tr[idx])[:, None]
         targ = t_targets[idx]
-        d2 = torch.minimum(((pred_dec - targ) / GAMMA_MAX) ** 2, ((pred_dec + targ) / GAMMA_MAX) ** 2)
+        d2 = ((pred_dec - targ) / GAMMA_MAX) ** 2
         d2 = d2.masked_fill(~t_mask[idx], float("inf"))
         loss_s = d2.min(dim=1).values.mean()
         loss_s.backward()
@@ -242,6 +243,9 @@ def train_and_predict_manifold_ablations(
     model_scalar.eval()
     with torch.no_grad():
         pred_scalar_a = (model_scalar(features_te).cpu().numpy().astype(np.float64)) / scale
+
+    if not run_grid:
+        return pred_scalar_a, None
 
     # 2. 训练 Echo-GNN-Grid
     torch.manual_seed(seed)

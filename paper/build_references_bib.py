@@ -169,7 +169,7 @@ def parse_apa_entry(entry: str):
     if vol_match:
         volume = vol_match.group(1)
 
-    pub_match = re.search(r"\)\.\s*([A-Za-z\s]+)\.\s*https?://", rest)
+    pub_match = re.search(r"\)\.\s*([A-Za-z\s]+)\.(?:\s*https?://|$)", rest)
     if pub_match:
         publisher = pub_match.group(1).strip()
 

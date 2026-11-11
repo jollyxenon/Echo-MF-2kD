@@ -541,6 +541,17 @@ def _eval_single_baseline_task(task: tuple) -> dict:
     return dict(id=str(inst_id), index=int(inst_idx), **res)
 
 
+def _train_ablation_depth_task(task: tuple) -> tuple[int, np.ndarray, np.ndarray | None]:
+    """在独立进程中训练单个深度的一维流形表示消融模型并返回测试集预测标量。"""
+    p, X_train, h_train, J_train, X_test, run_grid = task
+    pi_train = predict_echo_prior_flat_seed0(p, J_train, h_train)
+    pred_scalar_a, pred_grid_a = train_and_predict_manifold_ablations(
+        X_train, h_train, pi_train, X_test, n_qubits=J_train.shape[1],
+        depth=p, seed=0, run_grid=run_grid,
+    )
+    return p, pred_scalar_a, pred_grid_a
+
+
 def _eval_ablation_scalar_task(task: tuple) -> dict:
     """在单道测试题上从给定 1D 平顶标量展开并运行 Stage-2 能量优化。"""
     inst_idx, inst_id, J, h, target_idx, depth, scalar_a = task
@@ -582,6 +593,7 @@ def ensure_baseline_records(eval_root: Path, workers: int = 24) -> None:
     X_train = build_features(J_train, h_train).astype(np.float32)
     X_test = build_features(J_test, h_test).astype(np.float32)
 
+    ablation_jobs = []
     for p in (8, 10, 12):
         for method, pat in baseline_specs.items():
             out_file = baselines_dir / pat.format(p=p)
@@ -602,14 +614,22 @@ def ensure_baseline_records(eval_root: Path, workers: int = 24) -> None:
 
         f_scalar = baselines_dir / f"Echo-GNN-Scalar__p{p:02d}.jsonl"
         f_grid = baselines_dir / f"Echo-GNN-Grid__p{p:02d}.jsonl"
-        if not (f_scalar.exists() and len(read_jsonl(f_scalar)) == len(test_idx)
-                and f_grid.exists() and len(read_jsonl(f_grid)) == len(test_idx)):
-            print(f"  [Ablation] Training & evaluating Echo-GNN-Scalar and Echo-GNN-Grid (p={p})...", flush=True)
-            pi_train = predict_echo_prior_flat_seed0(p, J_train, h_train)
-            pred_scalar_a, pred_grid_a = train_and_predict_manifold_ablations(
-                X_train, h_train, pi_train, X_test, n_qubits=J_train.shape[1], depth=p, seed=0
-            )
+        has_scalar = f_scalar.exists() and len(read_jsonl(f_scalar)) == len(test_idx)
+        has_grid = f_grid.exists() and len(read_jsonl(f_grid)) == len(test_idx)
+        if not (has_scalar and has_grid):
+            ablation_jobs.append((p, X_train, h_train, J_train, X_test, not has_grid))
+
+    if ablation_jobs:
+        depths_str = ", ".join(str(job[0]) for job in ablation_jobs)
+        print(f"  [Ablation] Parallel training Echo-GNN-Scalar across depths ({depths_str})...", flush=True)
+        with ProcessPoolExecutor(max_workers=min(len(ablation_jobs), workers)) as pool:
+            trained_list = list(pool.map(_train_ablation_depth_task, ablation_jobs))
+        for p, pred_scalar_a, pred_grid_a in trained_list:
+            f_scalar = baselines_dir / f"Echo-GNN-Scalar__p{p:02d}.jsonl"
+            f_grid = baselines_dir / f"Echo-GNN-Grid__p{p:02d}.jsonl"
             for out_file, a_preds in ((f_scalar, pred_scalar_a), (f_grid, pred_grid_a)):
+                if a_preds is None or (out_file.exists() and len(read_jsonl(out_file)) == len(test_idx)):
+                    continue
                 tasks = [
                     (int(test_idx[i]), ids_test[i], J_test[i], h_test[i], int(target_test[i]), p, float(a_preds[i]))
                     for i in range(len(test_idx))
@@ -1025,7 +1045,7 @@ def run_stage1_shot_noise_instance(task: tuple) -> dict:
 
 
 def run_parameter_shift_instance(task: tuple) -> dict:
-    """模式 B：单道测试题上调用 shot_noise_adam_optimize（多项分布抽样 + 参数移位梯度）评测 TQA, Echo-MF-Flat, Echo-MF-2kD, Echo-Prior-Flat。"""
+    """模式 B：单道测试题上调用 shot_noise_adam_optimize（真实两点移位电路投影测量）评测 TQA, Echo-MF-Flat, Echo-MF-2kD, Echo-Prior-Flat。"""
     idx, inst_id, J, h, target_idx, depth, mf_flat_ang, mf_2kd_ang, prior_flat_ang = task
     energy = energy_table(spin_table(len(h)), J, h, 0.0)
     flips = flips_for(len(h))
@@ -1037,12 +1057,18 @@ def run_parameter_shift_instance(task: tuple) -> dict:
 
     opt_steps = 64
     res = {}
-    for shots in SHOT_LEVELS_PARAMETER_SHIFT:
-        rng = np.random.default_rng(np.random.SeedSequence([0, 2, int(shots), int(idx)]))
-        noisy_e_1d = [float((rng.multinomial(shots, p) @ energy) / shots) for p in dists_1d]
-        tqa_init = cands_1d[int(np.argmin(noisy_e_1d))]
+    for shots in list(SHOT_LEVELS_PARAMETER_SHIFT) + [None]:
+        if shots is None:
+            rng = None
+            exact_e_1d = dists_1d @ energy
+            tqa_init = cands_1d[int(np.argmin(exact_e_1d))]
+            s_key = "inf"
+        else:
+            rng = np.random.default_rng(np.random.SeedSequence([0, 2, int(shots), int(idx)]))
+            noisy_e_1d = [float((rng.multinomial(shots, p) @ energy) / shots) for p in dists_1d]
+            tqa_init = cands_1d[int(np.argmin(noisy_e_1d))]
+            s_key = str(shots)
 
-        s_key = str(shots)
         res[s_key] = {}
         for m_name, init_ang in [
             ("TQA", tqa_init),
@@ -1198,9 +1224,9 @@ def run_task_shot_noise(out_dir: Path, workers: int = 24, depth: int = 10) -> di
         )
 
     ps_records.sort(key=lambda r: str(r["id"]))
-    evals_per_step = 4 * depth  # 2 * 2p = 40 次电路评估/步 (p=10)
-    for shots in SHOT_LEVELS_PARAMETER_SHIFT:
-        s_key = str(shots)
+    evals_per_step = 4 * depth + 1  # 每步 2*2p=40 次移位电路测量 + 1 次当前点能量择优测量 (p=10 时为 41 次/步)
+    for shots in list(SHOT_LEVELS_PARAMETER_SHIFT) + [None]:
+        s_key = "inf" if shots is None else str(shots)
         summary["regime_b_end_to_end_parameter_shift"][s_key] = {}
         for m_name, s1_evals in [("TQA", 32), ("Echo-MF-Flat", 0), ("Echo-MF-2kD", 0), ("Echo-Prior-Flat", 0)]:
             init_v = np.array([r["results"][s_key][m_name]["initial_probability"] * 100.0 for r in ps_records])
@@ -1211,18 +1237,19 @@ def run_task_shot_noise(out_dir: Path, workers: int = 24, depth: int = 10) -> di
             s16 = summarize_pct(p16_v)
             s32 = summarize_pct(p32_v)
             sf = summarize_pct(fin_v)
-            s2_evals_16 = 16 * evals_per_step
-            s2_evals_32 = 32 * evals_per_step
-            s2_evals_64 = 64 * evals_per_step
+            s2_evals_16 = 1 + 16 * evals_per_step
+            s2_evals_32 = 1 + 32 * evals_per_step
+            s2_evals_64 = 1 + 64 * evals_per_step
             summary["regime_b_end_to_end_parameter_shift"][s_key][m_name] = dict(
                 stage1_evals=s1_evals,
+                stage2_initial_evals=1,
                 stage2_evals_per_step=evals_per_step,
                 stage2_evals_16steps=s2_evals_16,
                 stage2_evals_32steps=s2_evals_32,
                 stage2_evals_64steps=s2_evals_64,
-                total_quantum_shots_16steps=(s1_evals + s2_evals_16) * shots,
-                total_quantum_shots_32steps=(s1_evals + s2_evals_32) * shots,
-                total_quantum_shots_64steps=(s1_evals + s2_evals_64) * shots,
+                total_quantum_shots_16steps=None if shots is None else (s1_evals + s2_evals_16) * shots,
+                total_quantum_shots_32steps=None if shots is None else (s1_evals + s2_evals_32) * shots,
+                total_quantum_shots_64steps=None if shots is None else (s1_evals + s2_evals_64) * shots,
                 mean_init_pct=si["mean_pct"],
                 init_ci95=si["ci95"],
                 init_ci=si["ci_offset"],
