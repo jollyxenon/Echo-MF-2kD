@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Deterministically convert paper/paper2-ncs-en.md into the publication-grade
-single-column LaTeX manuscript paper/main.tex.
+single-column LaTeX manuscript paper/paper2_preprint.tex.
 """
 
 import re
@@ -10,7 +10,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 EN_MD = HERE / "paper2-ncs-en.md"
 BIB_FILE = HERE / "references.bib"
-OUT_TEX = HERE / "main.tex"
+OUT_TEX = HERE / "paper2_preprint.tex"
 
 LATEX_TO_UTF8 = {
     '{\\"a}': "ä",
@@ -72,7 +72,7 @@ def build_bib_map(bib_text: str) -> dict[tuple[str, str], str]:
 
 
 def convert() -> None:
-    """Convert paper2-ncs-en.md to Nature Computational Science main.tex."""
+    """Convert paper2-ncs-en.md to Nature Computational Science paper2_preprint.tex."""
     bib_text = BIB_FILE.read_text(encoding="utf-8")
     bib_map = build_bib_map(bib_text)
     md_text = EN_MD.read_text(encoding="utf-8")
@@ -530,7 +530,7 @@ def convert() -> None:
 
     full_tex = preamble + "\n" + body_tex + "\n\n\\end{document}\n"
     non_ascii = [c for c in full_tex if ord(c) >= 128]
-    assert not non_ascii, f"Found non-ASCII chars in main.tex: {non_ascii}"
+    assert not non_ascii, f"Found non-ASCII chars in paper2_preprint.tex: {non_ascii}"
     OUT_TEX.write_text(full_tex, encoding="utf-8")
     print(f"Successfully wrote {len(full_tex.splitlines())} pure-ASCII lines to {OUT_TEX}")
 
