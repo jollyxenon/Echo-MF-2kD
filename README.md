@@ -29,6 +29,21 @@ pixi install -e figures
 
 ## Quick Start
 
+### 0. Deterministic Benchmark Dataset Generation (`seed = 0`)
+
+All benchmark instances are generated deterministically from fixed `seed = 0` with exact two-step unique-ground-state verification (existing output directories are never overwritten; remove `data/` first if switching from a quick subset to the full suite):
+
+```bash
+# Option A (Fast verification, ~2 seconds): generate a small subset to test CLI commands immediately
+pixi run generate-instances --sizes 8 10 11 12 --instances-per-cell 2
+pixi run generate-mwis --sizes 6 8 10 12 14 --splits 0 0 4
+
+# Option B (Full manuscript reproduction): generate all 2,750 five-family instances + all 5,120 cross-scale MWIS test instances
+rm -rf data/benchmark data/mwis
+pixi run generate-instances
+pixi run generate-mwis
+```
+
 ### 1. Training-Free Online Single-Instance Solving (Input $(J,h)$ Only)
 
 ```bash
@@ -50,14 +65,19 @@ pixi run -e learning evaluate-baselines --dataset data/mwis/n10/dataset.npz --de
 pixi run -e learning evaluate-baselines --dataset data/mwis/n10/dataset.npz --depth 10 --method "Warm-Start QAOA" --split test --output runs/baselines/ws_p10
 ```
 
-### 3. Canonical Experiments & Manuscript Figures
+### 3. Canonical Experiments, Manuscript Figures & Preprint PDF
 
 ```bash
-# Run canonical multi-scalar scaling, ablation, multi-family, and finite-shot noise benchmarks
+# Run self-contained canonical multi-scalar scaling, ablation, multi-family, and finite-shot noise benchmarks
+# (--task choices: all, n10_baselines, n10_2kd_test1024, cross_scale_mwis, five_families_n11_n12, shot_noise, ising_online_benchmark)
 pixi run -e learning canonical-experiments --task all
 
-# Generate all Paper 2 publication figures and Source Data CSVs
+# Regenerate all Paper 2 publication figures directly from bundled Source Data CSVs (or fresh runs/canonical/ outputs)
 pixi run -e figures paper2-figures
+
+# Rebuild BibTeX and compile the manuscript PDF
+pixi run -e figures build-bib
+pixi run -e figures build-pdf
 ```
 
 ---

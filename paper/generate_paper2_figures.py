@@ -20,7 +20,6 @@ OUT = HERE / 'figures'
 OUT.mkdir(parents=True, exist_ok=True)
 QA = ROOT / 'runs/canonical/figure-qa'
 QA.mkdir(parents=True, exist_ok=True)
-ARCHIVE = ROOT / 'runs/models_and_eval'
 CANON = ROOT / 'runs/canonical'
 
 plt.rcParams.update({
@@ -70,7 +69,7 @@ def save(fig, name):
 # =============================================================================
 # 1. 免训练启发式赛道与先验阶梯对比图 (mf-echo-comparison, Paper 2 Fig. 2)
 # =============================================================================
-REV = ARCHIVE / 'baselines'
+REV = CANON / 'baselines'
 
 
 def load_rev_jsonl(rel_path, expected_ids):
@@ -82,9 +81,10 @@ def load_rev_jsonl(rel_path, expected_ids):
             np.array([r['probability'] for r in rows]) * 100)
 
 
-if (ARCHIVE / 'manifest.json').exists():
-    manifest = json.loads((ARCHIVE / 'manifest.json').read_text(encoding='utf-8'))
-    expected_ids = manifest['datasets']['10']['ids']
+if (CANON / 'n10_baselines_summary.json').exists() and all(
+    (CANON / f'n10_2kd_test1024_p{p:02d}_v2.jsonl').exists() for p in (8, 10, 12)
+):
+    expected_ids = json.loads((CANON / 'n10_baselines_summary.json').read_text(encoding='utf-8'))['test_ids']
     mf_paired_rows = []
     REV_SPECS = [
         ('Echo-MF-Flat', 'Echo-MF-Flat__p{p:02d}.jsonl'),

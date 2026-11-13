@@ -1,4 +1,4 @@
-"""逐比特概率先验（神经蒸馏或免训练经典平均场）到三种 Echo 参数族的确定性解码。"""
+"""逐比特自旋边缘先验到 Echo 参数族的确定性重叠解码与分阶段多标量伴随精修。"""
 from __future__ import annotations
 
 import numpy as np
