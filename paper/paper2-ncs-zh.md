@@ -374,7 +374,7 @@ Wurtz, J., & Love, P. J. (2022). Counterdiabaticity and the quantum approximate 
 
 Yang, Z. C., Rahmani, A., Shabani, A., Neven, H., & Chamon, C. (2017). Optimizing variational quantum algorithms using Pontryagin's minimum principle. _Physical Review X_, _7_(2), 021027. https://doi.org/10.1103/physrevx.7.021027
 
-Yao, J. (2026). Echo-QAOA: Constructive spin-echo response design and per-qubit marginal distillation for variational quantum optimization. _Research Square preprint_.
+Yao, J. (2026). Echo-QAOA: Constructive spin-echo response design and per-qubit marginal distillation for variational quantum optimization. _Research Square preprint_. https://doi.org/10.21203/rs.3.rs-11707296/v1
 
 You, X., & Wu, X. (2021). Exponentially many local minima in quantum neural networks. In _Proceedings of the 38th International Conference on Machine Learning (ICML)_ (Vol. 139, pp. 12144–12155). PMLR.
 

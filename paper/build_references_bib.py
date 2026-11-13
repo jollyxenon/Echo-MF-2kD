@@ -149,7 +149,8 @@ def parse_apa_entry(entry: str):
         if "*arXiv*" in rest or "_arXiv_" in rest or "arXiv preprint" in rest:
             journal = f"arXiv preprint arXiv:{eprint}" if eprint else "arXiv preprint"
         elif "Research Square preprint" in rest:
-            journal = f"Research Square preprint https://doi.org/{doi}" if doi else "Research Square preprint"
+            rs_match = re.search(r"(rs-\d+/v\d+)", rest)
+            journal = f"Research Square preprint {rs_match.group(1)}" if rs_match else "Research Square preprint"
         else:
             j_match = re.search(r"[*_]([^*_]+)[*_]", rest)
             if j_match:
