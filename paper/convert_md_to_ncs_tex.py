@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Deterministically convert paper/paper2-ncs-en.md into the publication-grade
-single-column LaTeX manuscript paper/paper2_preprint.tex.
+npj Quantum Information (Springer Nature / Nature Portfolio) LaTeX manuscript
+paper/paper2_preprint.tex.
 """
 
 import re
@@ -81,19 +82,22 @@ def convert() -> None:
     part_main_and_methods, rem_ext = md_text.split("\n## Extended Data\n", 1)
     part_ext, rem_decl = rem_ext.split("\n---\n\n## Data Availability\n", 1)
     part_decl, _ = rem_decl.split("\n## References\n", 1)
+    part_avail, part_post_ref = part_decl.split("\n## Acknowledgments\n", 1)
 
     full_md = (
         part_main_and_methods.rstrip()
         + "\n\n## Data Availability\n"
-        + part_decl.rstrip()
-        + "\n\n@@BIBLIOGRAPHY@@\n\n## Extended Data\n"
+        + part_avail.rstrip()
+        + "\n\n@@BIBLIOGRAPHY@@\n\n## Acknowledgments\n"
+        + part_post_ref.rstrip()
+        + "\n\n## Extended Data\n"
         + part_ext.rstrip()
         + "\n"
     )
 
     # 2. Replace Mermaid Figure 1 block and caption
     fig1_pattern = re.compile(
-        r"```mermaid\n.*?\n```\s*\n+\*\*Figure 1\s*\|\s*(.+?)\*\*\s*(.+?)(?=\n\n)",
+        r"```mermaid\n.*?\n```\s*\n+\*\*(?:Fig\.|Figure)\s*1\s*\|\s*(.+?)\*\*\s*(.+?)(?=\n\n)",
         re.DOTALL,
     )
 
@@ -107,9 +111,9 @@ def convert() -> None:
 
     full_md = fig1_pattern.sub(repl_fig1, full_md)
 
-    # 3. Replace HTML <img> + **Figure X | ...** for Figures 2 and 3
+    # 3. Replace HTML <img> + **Fig. X | ...** for Figures 2 and 3
     fig_img_pattern = re.compile(
-        r'<img\s+src="figures/([^"]+)\.png"[^>]*>\s*\n+\*\*Figure\s+(\d+)\s*\|\s*(.+?)\*\*\s*(.+?)(?=\n\n)',
+        r'<img\s+src="figures/([^"]+)\.png"[^>]*>\s*\n+\*\*(?:Fig\.|Figure)\s+(\d+)\s*\|\s*(.+?)\*\*\s*(.+?)(?=\n\n)',
         re.DOTALL,
     )
 
@@ -299,7 +303,7 @@ def convert() -> None:
         out.append(h_tex)
         out.append("\\midrule")
         for r_idx, row in enumerate(data_rows):
-            if t_id in ("1", "ED1") and r_idx > 0 and row[0]:
+            if t_id in ("1", "ED2") and r_idx > 0 and row[0]:
                 out.append("\\midrule")
             elif t_id == "2" and r_idx in (4, 7):
                 out.append("\\midrule")
@@ -314,9 +318,9 @@ def convert() -> None:
         t_cap_tex = f"\\textbf{{{format_inline_md(t_bold.strip())}}} {format_inline_md(t_rest.strip())}"
         label_id = t_id.lower().replace(".", "_")
 
-        if t_id in ("2", "ED1"):
+        if t_id in ("2", "ED2"):
             tabcol_pt = "3.8pt"
-        elif t_id in ("1", "ED2"):
+        elif t_id in ("1", "ED3"):
             tabcol_pt = "4.2pt"
         else:
             tabcol_pt = "4.0pt"
@@ -508,10 +512,10 @@ def convert() -> None:
         else:
             body_tex = body_tex.replace(f"@@MATH{idx}@@", m_tex)
 
-    preamble = r"""%%%%%%%% NATURE COMPUTATIONAL SCIENCE LATEX MANUSCRIPT %%%%%%%%%%%%%%%%
+    preamble = r"""%%%%%%%% NPJ QUANTUM INFORMATION LATEX MANUSCRIPT %%%%%%%%%%%%%%%%%%%%%
 %
 % Deterministic conversion of paper/paper2-ncs-en.md
-% Style: Nature Portfolio / Nature Computational Science (sn-ncs.sty)
+% Style: Nature Portfolio / npj Quantum Information (sn-ncs.sty)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass[10pt,a4paper]{article}

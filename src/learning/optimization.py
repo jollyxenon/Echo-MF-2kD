@@ -226,7 +226,7 @@ def shot_noise_adam_optimize(
 ) -> dict[int, np.ndarray]:
     """有限步长两点移位电路投影抽样梯度与余弦退火 Adam 优化器（docs/module-settings.md §8.2）。
 
-    - 在原生全局脉冲参数空间选取满足 Nyquist 无混叠条件 (delta < pi / (2n)) 的移位步长 delta = 0.10 rad；
+    - 在原生全局脉冲参数空间选取平衡导数传递保真度与散粒噪声放大的中心移位步长 delta = 0.10 rad；
     - 初始点执行 1 次电路能量测量；每步对全部 2*2p 个正负移位电路 (theta +/- delta * e_ell) 分别执行多项分布
       投影测量抽样构造中心差分梯度 (E_+ - E_-) / (2 * delta)，并对当前电路执行 1 次测量以跟踪历史最低观测能量
       （t 步累计电路评估次数为 1 + (4p + 1) * t；当 shots=None 时使用精确移位电路期望能量作同优化器无噪对照）；

@@ -1,9 +1,9 @@
 %%
-%% sn-ncs.sty - Nature Computational Science (Nature Portfolio) Preprint Style
+%% sn-ncs.sty - Nature Portfolio / npj Quantum Information Article Style
 %% Clean, publication-grade single-column layout with Nature Portfolio typography
 %%
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{sn-ncs}[2026/11/10 Nature Computational Science Article Style]
+\ProvidesPackage{sn-ncs}[2026/11/18 Nature Portfolio npj Quantum Information Article Style]
 
 \RequirePackage[T1]{fontenc}
 \RequirePackage{lmodern}
@@ -12,7 +12,7 @@
   a4paper,
   top=20mm,
   bottom=20mm,
-  left=18mm,
+  left=21mm,
   right=18mm,
   headheight=20pt,
   headsep=8mm,
@@ -23,11 +23,35 @@
 \RequirePackage{booktabs}
 \RequirePackage{array}
 \RequirePackage{amsmath,amssymb,mathtools}
+\RequirePackage{etoolbox}
+\RequirePackage[left]{lineno}
+\renewcommand\linenumberfont{\normalfont\scriptsize\sffamily\color{ncsmuted}}
+\setlength\linenumbersep{6pt}
+\newcommand*\patchAmsMathEnvironmentForLineno[1]{%
+  \expandafter\let\csname old#1\expandafter\endcsname\csname #1\endcsname
+  \expandafter\let\csname oldend#1\expandafter\endcsname\csname end#1\endcsname
+  \renewenvironment{#1}%
+    {\linenomath\csname old#1\endcsname}%
+    {\csname oldend#1\endcsname\endlinenomath}}%
+\AtBeginDocument{%
+  \patchAmsMathEnvironmentForLineno{equation}%
+  \patchAmsMathEnvironmentForLineno{equation*}%
+  \patchAmsMathEnvironmentForLineno{align}%
+  \patchAmsMathEnvironmentForLineno{align*}%
+  \patchAmsMathEnvironmentForLineno{gather}%
+  \patchAmsMathEnvironmentForLineno{gather*}%
+  \linenumbers
+}
 \RequirePackage{fancyhdr}
 \RequirePackage{titlesec}
 \RequirePackage[font=small,labelfont=bf,labelsep=period]{caption}
+\renewcommand{\figurename}{Fig.}
 \RequirePackage[numbers,sort&compress,super]{natbib}
 \RequirePackage[colorlinks=true,linkcolor=ncsblue,citecolor=ncsblue,urlcolor=ncsblue]{hyperref}
+
+% Double-anonymized peer review (DAPR) toggle (false for npj Quantum Information single-anonymized review)
+\newif\ifncsdapr
+\ncsdaprfalse
 
 % Nature Portfolio Palette
 \definecolor{ncsred}{HTML}{B91C1C}
@@ -40,7 +64,11 @@
 % Running headers and footers
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\footnotesize\sffamily\color{ncsmuted}Jianxuan Yao}
+\ifncsdapr
+  \fancyhead[L]{\footnotesize\sffamily\color{ncsmuted}Double-Anonymized Manuscript}
+\else
+  \fancyhead[L]{\footnotesize\sffamily\color{ncsmuted}\@ncsauthor}
+\fi
 \fancyhead[R]{\footnotesize\sffamily\color{ncsmuted}Echo-MF-2kD Manifold Initialization}
 \fancyfoot[C]{\footnotesize\sffamily\color{ncsmuted}\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -49,7 +77,11 @@
 % First page style
 \fancypagestyle{firstpage}{%
   \fancyhf{}%
-  \fancyhead[L]{\footnotesize\sffamily\bfseries\color{ncsdark}PREPRINT MANUSCRIPT}%
+  \ifncsdapr
+    \fancyhead[L]{\footnotesize\sffamily\bfseries\color{ncsdark}DOUBLE-ANONYMIZED SUBMISSION}%
+  \else
+    \fancyhead[L]{\footnotesize\sffamily\bfseries\color{ncsdark}PREPRINT MANUSCRIPT}%
+  \fi
   \fancyhead[R]{\footnotesize\sffamily\color{ncsmuted}RESEARCH ARTICLE}%
   \fancyfoot[C]{\footnotesize\sffamily\color{ncsmuted}\thepage}%
   \renewcommand{\headrulewidth}{0.8pt}%
@@ -105,24 +137,33 @@
 \newcommand{\ncsemail}[1]{\def\@ncsemail{#1}}
 
 \newcommand{\makencstitle}{%
-  \hypersetup{pdftitle={\@ncstitle},pdfauthor={\@ncsauthor},pdfsubject={Preprint Manuscript},pdfkeywords={Quantum Approximate Optimization Algorithm, Spin Echo, Mean-Field Theory, Variational Quantum Optimization, Combinatorial Optimization}}%
-  \thispagestyle{firstpage}%
-  \vspace*{2pt}%
-  {\noindent\LARGE\sffamily\bfseries\color{ncsdark}\raggedright \@ncstitle\par}%
-  \vspace{8pt}%
-  {\noindent\normalsize\sffamily\bfseries\color{ncsdark}\@ncsauthor\textsuperscript{1,$\star$}\par}%
-  \vspace{3pt}%
-  {\noindent\footnotesize\sffamily\color{ncsmuted}\textsuperscript{1}\@ncsaffiliation. \textsuperscript{$\star$}e-mail: \href{mailto:\@ncsemail}{\texttt{\@ncsemail}}\par}%
-  \vspace{8pt}%
+  \ifncsdapr
+    \hypersetup{pdftitle={\@ncstitle},pdfauthor={},pdfcreator={},pdfsubject={Double-Anonymized Peer Review Manuscript},pdfkeywords={Quantum Approximate Optimization Algorithm, Spin Echo, Mean-Field Theory, Variational Quantum Optimization, Combinatorial Optimization}}%
+    \thispagestyle{firstpage}%
+    \vspace*{2pt}%
+    {\noindent\LARGE\sffamily\bfseries\color{ncsdark}\raggedright \@ncstitle\par}%
+    \vspace{6pt}%
+    {\noindent\footnotesize\sffamily\color{ncsmuted}Prepared for double-anonymized peer review (author identities and affiliations withheld).\par}%
+    \vspace{8pt}%
+  \else
+    \hypersetup{pdftitle={\@ncstitle},pdfauthor={\@ncsauthor},pdfsubject={Preprint Manuscript},pdfkeywords={Quantum Approximate Optimization Algorithm, Spin Echo, Mean-Field Theory, Variational Quantum Optimization, Combinatorial Optimization}}%
+    \thispagestyle{firstpage}%
+    \vspace*{2pt}%
+    {\noindent\LARGE\sffamily\bfseries\color{ncsdark}\raggedright \@ncstitle\par}%
+    \vspace{8pt}%
+    {\noindent\normalsize\sffamily\bfseries\color{ncsdark}\@ncsauthor\textsuperscript{1,$\star$}\par}%
+    \vspace{3pt}%
+    {\noindent\footnotesize\sffamily\color{ncsmuted}\textsuperscript{1}\@ncsaffiliation. \textsuperscript{$\star$}e-mail: \href{mailto:\@ncsemail}{\texttt{\@ncsemail}}\par}%
+    \vspace{8pt}%
+  \fi
 }
 
 % Boxed / Ruled Preprint Abstract Environment
 \newenvironment{ncsabstract}{%
-  \noindent\textcolor{ncsdark}{\rule{\textwidth}{1.0pt}}\par\vspace{3pt}%
-  \noindent\begin{minipage}{\textwidth}%
-  \small\sffamily\bfseries\color{ncsdark}%
+  \noindent\textcolor{ncsdark}{\rule{\textwidth}{1.0pt}}\par\vspace{4pt}%
+  \begingroup\small\sffamily\bfseries\color{ncsdark}\noindent\ignorespaces
 }{%
-  \end{minipage}\par\vspace{3pt}%
+  \par\endgroup\vspace{3pt}%
   \noindent\textcolor{ncsrule}{\rule{\textwidth}{0.6pt}}\par\vspace{6pt}%
 }
 

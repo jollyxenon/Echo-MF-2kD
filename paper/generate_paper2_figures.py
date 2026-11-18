@@ -18,20 +18,18 @@ from learning.aggregation import interval
 
 OUT = HERE / 'figures'
 OUT.mkdir(parents=True, exist_ok=True)
-QA = ROOT / 'runs/canonical/figure-qa'
-QA.mkdir(parents=True, exist_ok=True)
 CANON = ROOT / 'runs/canonical'
 
 plt.rcParams.update({
     'font.family': 'sans-serif',
     'font.sans-serif': ['DejaVu Sans'],
     'mathtext.fontset': 'cm',
-    'font.size': 8,
-    'axes.labelsize': 8,
-    'axes.titlesize': 9,
-    'xtick.labelsize': 7,
-    'ytick.labelsize': 7,
-    'legend.fontsize': 6.6,
+    'font.size': 7.0,
+    'axes.labelsize': 7.0,
+    'axes.titlesize': 7.5,
+    'xtick.labelsize': 6.5,
+    'ytick.labelsize': 6.5,
+    'legend.fontsize': 6.0,
     'axes.spines.top': False,
     'axes.spines.right': False,
     'axes.linewidth': 0.6,
@@ -52,9 +50,9 @@ def write_csv(name, rows):
 
 def label(ax, letter, title):
     """固定物理偏移放置面板编号与短标题。"""
-    ax.annotate(letter, xy=(0, 1), xycoords='axes fraction', xytext=(-25, 13), textcoords='offset points',
-                fontsize=10, fontweight='bold', annotation_clip=False)
-    ax.set_title(title, loc='left', pad=13)
+    ax.annotate(letter, xy=(0, 1), xycoords='axes fraction', xytext=(-25, 11), textcoords='offset points',
+                fontsize=9.0, fontweight='bold', annotation_clip=False)
+    ax.set_title(title, loc='left', pad=11)
 
 
 def save(fig, name):
@@ -120,8 +118,8 @@ with (OUT / 'mf-echo-paired.csv').open('r', encoding='utf-8') as f:
         items.sort(key=lambda t: t[0])
         mf_data[key] = (np.array([t[1] for t in items]), np.array([t[2] for t in items]))
 
-fig, axes = plt.subplots(2, 2, figsize=(7.1, 5.6))
-fig.subplots_adjust(left=.145, right=.975, bottom=.08, top=.91, wspace=.36, hspace=.40)
+fig, axes = plt.subplots(2, 2, figsize=(7.05, 5.55))
+fig.subplots_adjust(left=.145, right=.975, bottom=.08, top=.88, wspace=.36, hspace=.40)
 ma, mb, mc, md = axes.flat
 label(ma, 'a', 'Training-free ladder & refinement')
 label(mb, 'b', 'Training-free depth scaling')
@@ -191,7 +189,7 @@ for i, (key, disp, col, fmt, lw_v) in enumerate(TF_METHODS):
             fontweight='bold' if i == 0 else 'normal', color=col)
 
 mb.set(xlim=(7.5, 13.3), xticks=[8, 10, 12], ylim=(6, 70), yticks=[15, 30, 45, 60],
-       xlabel='Circuit depth p', ylabel='Mean probability (%)')
+       xlabel='Circuit depth $p$', ylabel='Mean probability (%)')
 
 mf2k_cross = np.mean([mf_data['Echo-MF-2kD', p][1] for p in (8, 10, 12)], axis=0)
 mf_cross = np.mean([mf_data['Echo-MF-Flat', p][1] for p in (8, 10, 12)], axis=0)
@@ -240,7 +238,7 @@ for p in (8, 10, 12):
 
 md.axhline(0, color='#9BA3AA', lw=.7, ls='--')
 md.set(xlim=(7.1, 12.9), xticks=[8, 10, 12], ylim=(-46, 108), yticks=[-30, 0, 30, 60, 90],
-       xlabel='Circuit depth p', ylabel='Paired difference (pp)')
+       xlabel='Circuit depth $p$', ylabel='Paired difference (pp)')
 md.legend(handles=[
     Line2D([], [], color='#4676A8', lw=2.2, label='vs. TQA (32 evals)'),
     Line2D([], [], color='#1F9E89', lw=2.2, label='vs. Echo-MF-Flat (1D)'),
@@ -249,8 +247,8 @@ md.legend(handles=[
 
 fig.legend(handles=[Line2D([], [], marker=fmt[0], color=co, ls=fmt[1:], label=lb)
                     for _, lb, co, fmt, _ in TF_METHODS],
-           loc='upper center', bbox_to_anchor=(.54, .995), ncol=5, columnspacing=.8,
-           handletextpad=.4, frameon=False, fontsize=6.8)
+           loc='upper center', bbox_to_anchor=(.54, .988), ncol=5, columnspacing=.8,
+           handletextpad=.4, frameon=False, fontsize=6.4)
 save(fig, 'mf-echo-comparison')
 write_csv('mf-echo-summary.csv', mf_stats)
 
@@ -329,11 +327,11 @@ mf_p10_bars = [scale_lookup['b_online_scaling_p10', f'n={n}', 'Echo-MF-2kD'][0] 
 mf1d_p10_bars = [scale_lookup['b_online_scaling_p10', f'n={n}', 'Echo-MF-Flat (1D)'][0] for n in online_sizes]
 tqa_p10_bars = [scale_lookup['b_online_scaling_p10', f'n={n}', 'Online TQA (32 evals)'][0] for n in online_sizes]
 
-fig, axes = plt.subplots(2, 2, figsize=(7.1, 5.6))
+fig, axes = plt.subplots(2, 2, figsize=(7.05, 5.55))
 fig.subplots_adjust(left=.115, right=.975, bottom=.10, top=.91, wspace=.34, hspace=.42)
 ax_a, ax_b, ax_c, ax_d = axes.flat
 
-label(ax_a, 'a', f'Cross-scale MWIS scaling (n = {sizes_all[0]}..{sizes_all[-1]})')
+label(ax_a, 'a', f'Cross-scale MWIS scaling ($n = {sizes_all[0]}..{sizes_all[-1]}$)')
 label(ax_b, 'b', 'Oriented spin accuracy & online scaling')
 label(ax_c, 'c', 'Stage-1 selection under projective shot noise')
 label(ax_d, 'd', 'End-to-end finite-shot optimization')
@@ -353,7 +351,7 @@ for idx_show in range(len(sizes_all)):
 ax_a.set_xlim(-0.36, len(sizes_all) - 0.62)
 ax_a.set_xticks(x_a)
 ax_a.set_xticklabels([str(n) for n in sizes_all])
-ax_a.set_xlabel(f'Number of qubits n ({1 << sizes_all[0]} to {1 << sizes_all[-1]:,} states)')
+ax_a.set_xlabel(f'Number of qubits $n$ ({1 << sizes_all[0]} to {1 << sizes_all[-1]:,} states)')
 ax_a.set_ylabel('Ground-state probability (%)')
 ax_a.set_ylim(0, 112)
 ax_a.legend(loc='upper right', frameon=False, fontsize=6.1)
@@ -368,7 +366,7 @@ ax_b.bar(xb + w_bar, tqa_p10_bars, width=w_bar, color=C_TQA, alpha=0.85, label='
 
 ax_b.set_xticks(xb)
 ax_b.set_xticklabels([str(n) for n in online_sizes])
-ax_b.set_xlabel('Number of qubits n (online unsupervised)')
+ax_b.set_xlabel('Number of qubits $n$ (online unsupervised)')
 ax_b.set_ylabel('Spin accuracy / Online prob. (%)')
 ax_b.set_ylim(0, 109)
 ax_b.legend(loc='center right', bbox_to_anchor=(1.01, 0.62), frameon=False, fontsize=5.8, handlelength=1.4, labelspacing=0.30)
@@ -395,9 +393,9 @@ shots_d = [64, 256, 1024, 4096]
 xd = np.arange(len(shots_d))
 plotted_series = {}
 for m_name, col, fmt, disp in [
-    ('Echo-MF-2kD (64 steps)', C_PRIOR, 'o-', 'Echo-MF-2kD (64st, 0+2625)'),
-    ('Echo-MF-Flat (64 steps)', C_MF, 's:', 'Echo-MF-Flat (64st, 0+2625)'),
-    ('TQA (64 steps)', C_TQA, 'v--', 'TQA (64st, 32+2625)'),
+    ('Echo-MF-2kD (64 steps)', C_PRIOR, 'o-', 'Echo-MF-2kD (64 steps, 0 + 2,625)'),
+    ('Echo-MF-Flat (64 steps)', C_MF, 's:', 'Echo-MF-Flat (64 steps, 0 + 2,625)'),
+    ('TQA (64 steps)', C_TQA, 'v--', 'TQA (64 steps, 32 + 2,625)'),
 ]:
     means = [scale_lookup['d_end_to_end_finite_shot', f'N_shots={s}', m_name][0] for s in shots_d]
     lo = [scale_lookup['d_end_to_end_finite_shot', f'N_shots={s}', m_name][1] for s in shots_d]
